@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "心知天气API",
+    "title": "心知天气",
     "description": "",
     "version": "1.0.0"
   },

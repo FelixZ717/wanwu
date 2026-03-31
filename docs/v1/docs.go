@@ -6393,6 +6393,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/copilotkit": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info获取运行时信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体CopilotRuntime协议端点",
+                "parameters": [
+                    {
+                        "description": "CopilotRuntime请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GeneralAgentCopilotRuntimeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CopilotRuntime信息",
+                        "schema": {
+                            "$ref": "#/definitions/response.GeneralAgentCopilotRuntimeInfoResp"
+                        }
+                    }
+                }
+            }
+        },
         "/general/agent/tool/info": {
             "get": {
                 "security": [
@@ -20609,6 +20648,22 @@ const docTemplate = `{
                 }
             }
         },
+        "request.GeneralAgentCopilotRuntimeReq": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "method": {
+                    "type": "string"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
         "request.GetModelRequest": {
             "type": "object",
             "required": [
@@ -23858,19 +23913,6 @@ const docTemplate = `{
                 }
             }
         },
-        "response.CheckTool": {
-            "type": "object",
-            "properties": {
-                "meet": {
-                    "description": "是否符合要求",
-                    "type": "boolean"
-                },
-                "toolId": {
-                    "description": "工具ID",
-                    "type": "string"
-                }
-            }
-        },
         "response.ChildContent": {
             "type": "object",
             "properties": {
@@ -25353,26 +25395,15 @@ const docTemplate = `{
                 }
             }
         },
-        "response.FileInfo": {
+        "response.GeneralAgentCheckTool": {
             "type": "object",
             "properties": {
-                "children": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.FileInfo"
-                    }
+                "meet": {
+                    "description": "是否符合要求",
+                    "type": "boolean"
                 },
-                "mimeType": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "size": {
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "\"file\" or \"directory\"",
+                "toolId": {
+                    "description": "工具ID",
                     "type": "string"
                 }
             }
@@ -25388,7 +25419,7 @@ const docTemplate = `{
                     "description": "工具是否符合要求",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.ToolCategories"
+                        "$ref": "#/definitions/response.GeneralAgentToolCategories"
                     }
                 },
                 "valid": {
@@ -25461,6 +25492,91 @@ const docTemplate = `{
                 }
             }
         },
+        "response.GeneralAgentCopilotRuntimeInfoAgent": {
+            "type": "object",
+            "properties": {
+                "className": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentCopilotRuntimeInfoResp": {
+            "type": "object",
+            "properties": {
+                "a2uiEnabled": {
+                    "type": "boolean"
+                },
+                "agents": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/response.GeneralAgentCopilotRuntimeInfoAgent"
+                    }
+                },
+                "audioFileTranscriptionEnabled": {
+                    "type": "boolean"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentFileInfo": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.GeneralAgentFileInfo"
+                    }
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "\"file\" or \"directory\"",
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentToolCategories": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "description": "工具类别类型",
+                    "type": "string"
+                },
+                "condition": {
+                    "description": "工具类别条件",
+                    "type": "string"
+                },
+                "meet": {
+                    "description": "是否满足条件",
+                    "type": "boolean"
+                },
+                "tools": {
+                    "description": "工具检查结果",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.GeneralAgentCheckTool"
+                    }
+                }
+            }
+        },
         "response.GeneralAgentToolInfoResp": {
             "type": "object",
             "properties": {
@@ -25483,7 +25599,7 @@ const docTemplate = `{
                 "files": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.FileInfo"
+                        "$ref": "#/definitions/response.GeneralAgentFileInfo"
                     }
                 },
                 "isDisplay": {
@@ -28186,30 +28302,6 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/protocol.Tool"
-                    }
-                }
-            }
-        },
-        "response.ToolCategories": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "description": "工具类别类型",
-                    "type": "string"
-                },
-                "condition": {
-                    "description": "工具类别条件",
-                    "type": "string"
-                },
-                "meet": {
-                    "description": "是否满足条件",
-                    "type": "boolean"
-                },
-                "tools": {
-                    "description": "工具检查结果",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.CheckTool"
                     }
                 }
             }

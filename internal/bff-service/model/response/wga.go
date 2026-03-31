@@ -35,34 +35,34 @@ type GetGeneralAgentConfigResp struct {
 }
 
 type GeneralAgentConfigCheckResponse struct {
-	Valid     bool             `json:"valid"`     // 是否有效
-	ModelMeet bool             `json:"modelMeet"` // 是否符合模型要求
-	ToolsMeet []ToolCategories `json:"toolsMeet"` // 工具是否符合要求
+	Valid     bool                         `json:"valid"`     // 是否有效
+	ModelMeet bool                         `json:"modelMeet"` // 是否符合模型要求
+	ToolsMeet []GeneralAgentToolCategories `json:"toolsMeet"` // 工具是否符合要求
 }
 
-type ToolCategories struct {
-	Category  string      `json:"category"`  // 工具类别类型
-	Condition string      `json:"condition"` // 工具类别条件
-	Meet      bool        `json:"meet"`      // 是否满足条件
-	Tools     []CheckTool `json:"tools"`     // 工具检查结果
+type GeneralAgentToolCategories struct {
+	Category  string                  `json:"category"`  // 工具类别类型
+	Condition string                  `json:"condition"` // 工具类别条件
+	Meet      bool                    `json:"meet"`      // 是否满足条件
+	Tools     []GeneralAgentCheckTool `json:"tools"`     // 工具检查结果
 }
-type CheckTool struct {
+type GeneralAgentCheckTool struct {
 	ToolID string `json:"toolId"` // 工具ID
 	Meet   bool   `json:"meet"`   // 是否符合要求
 }
 
-type FileInfo struct {
-	Name     string     `json:"name"`
-	Type     string     `json:"type"` // "file" or "directory"
-	Size     int64      `json:"size,omitempty"`
-	MimeType string     `json:"mimeType,omitempty"`
-	Children []FileInfo `json:"children,omitempty"`
+type GeneralAgentFileInfo struct {
+	Name     string                 `json:"name"`
+	Type     string                 `json:"type"` // "file" or "directory"
+	Size     int64                  `json:"size,omitempty"`
+	MimeType string                 `json:"mimeType,omitempty"`
+	Children []GeneralAgentFileInfo `json:"children,omitempty"`
 }
 
 type GeneralAgentWorkspaceResp struct {
 	GeneralAgentConversationWorkspaceInfo
-	Path  string     `json:"path"`
-	Files []FileInfo `json:"files"`
+	Path  string                 `json:"path"`
+	Files []GeneralAgentFileInfo `json:"files"`
 }
 
 type GeneralAgentConversationDetailInfo struct {
@@ -81,4 +81,18 @@ type GeneralAgentConversationWorkspaceInfo struct {
 	FileCount int32  `json:"fileCount"`
 	TotalSize int64  `json:"totalSize"`
 	IsDisplay bool   `json:"isDisplay"`
+}
+
+type GeneralAgentCopilotRuntimeInfoAgent struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ClassName   string `json:"className"`
+}
+
+type GeneralAgentCopilotRuntimeInfoResp struct {
+	Version                       string                                         `json:"version"`
+	Agents                        map[string]GeneralAgentCopilotRuntimeInfoAgent `json:"agents"`
+	Mode                          string                                         `json:"mode"`
+	AudioFileTranscriptionEnabled bool                                           `json:"audioFileTranscriptionEnabled"`
+	A2UIEnabled                   bool                                           `json:"a2uiEnabled,omitempty"`
 }

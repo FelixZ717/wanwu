@@ -2711,6 +2711,17 @@ definitions:
     - content
     - role
     type: object
+  request.GeneralAgentCopilotRuntimeReq:
+    properties:
+      body:
+        additionalProperties: true
+        type: object
+      method:
+        type: string
+      params:
+        additionalProperties: true
+        type: object
+    type: object
   request.GetModelRequest:
     properties:
       modelId:
@@ -4931,15 +4942,6 @@ definitions:
         description: 0:不存在，1：已完成
         type: integer
     type: object
-  response.CheckTool:
-    properties:
-      meet:
-        description: 是否符合要求
-        type: boolean
-      toolId:
-        description: 工具ID
-        type: string
-    type: object
   response.ChildContent:
     properties:
       childSnippet:
@@ -5911,20 +5913,13 @@ definitions:
         - $ref: '#/definitions/response.User'
         description: 作者信息
     type: object
-  response.FileInfo:
+  response.GeneralAgentCheckTool:
     properties:
-      children:
-        items:
-          $ref: '#/definitions/response.FileInfo'
-        type: array
-      mimeType:
-        type: string
-      name:
-        type: string
-      size:
-        type: integer
-      type:
-        description: '"file" or "directory"'
+      meet:
+        description: 是否符合要求
+        type: boolean
+      toolId:
+        description: 工具ID
         type: string
     type: object
   response.GeneralAgentConfigCheckResponse:
@@ -5935,7 +5930,7 @@ definitions:
       toolsMeet:
         description: 工具是否符合要求
         items:
-          $ref: '#/definitions/response.ToolCategories'
+          $ref: '#/definitions/response.GeneralAgentToolCategories'
         type: array
       valid:
         description: 是否有效
@@ -5984,6 +5979,63 @@ definitions:
       totalSize:
         type: integer
     type: object
+  response.GeneralAgentCopilotRuntimeInfoAgent:
+    properties:
+      className:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  response.GeneralAgentCopilotRuntimeInfoResp:
+    properties:
+      a2uiEnabled:
+        type: boolean
+      agents:
+        additionalProperties:
+          $ref: '#/definitions/response.GeneralAgentCopilotRuntimeInfoAgent'
+        type: object
+      audioFileTranscriptionEnabled:
+        type: boolean
+      mode:
+        type: string
+      version:
+        type: string
+    type: object
+  response.GeneralAgentFileInfo:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/response.GeneralAgentFileInfo'
+        type: array
+      mimeType:
+        type: string
+      name:
+        type: string
+      size:
+        type: integer
+      type:
+        description: '"file" or "directory"'
+        type: string
+    type: object
+  response.GeneralAgentToolCategories:
+    properties:
+      category:
+        description: 工具类别类型
+        type: string
+      condition:
+        description: 工具类别条件
+        type: string
+      meet:
+        description: 是否满足条件
+        type: boolean
+      tools:
+        description: 工具检查结果
+        items:
+          $ref: '#/definitions/response.GeneralAgentCheckTool'
+        type: array
+    type: object
   response.GeneralAgentToolInfoResp:
     properties:
       toolDesc:
@@ -5999,7 +6051,7 @@ definitions:
         type: integer
       files:
         items:
-          $ref: '#/definitions/response.FileInfo'
+          $ref: '#/definitions/response.GeneralAgentFileInfo'
         type: array
       isDisplay:
         type: boolean
@@ -7806,23 +7858,6 @@ definitions:
         description: action列表
         items:
           $ref: '#/definitions/protocol.Tool'
-        type: array
-    type: object
-  response.ToolCategories:
-    properties:
-      category:
-        description: 工具类别类型
-        type: string
-      condition:
-        description: 工具类别条件
-        type: string
-      meet:
-        description: 是否满足条件
-        type: boolean
-      tools:
-        description: 工具检查结果
-        items:
-          $ref: '#/definitions/response.CheckTool'
         type: array
     type: object
   response.ToolDetail4Workflow:
@@ -11984,6 +12019,30 @@ paths:
       security:
       - JWT: []
       summary: 通用智能体workspace预览
+      tags:
+      - wga
+  /general/agent/copilotkit:
+    post:
+      consumes:
+      - application/json
+      description: 通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info获取运行时信息
+      parameters:
+      - description: CopilotRuntime请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GeneralAgentCopilotRuntimeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: CopilotRuntime信息
+          schema:
+            $ref: '#/definitions/response.GeneralAgentCopilotRuntimeInfoResp'
+      security:
+      - JWT: []
+      summary: 通用智能体CopilotRuntime协议端点
       tags:
       - wga
   /general/agent/tool/info:

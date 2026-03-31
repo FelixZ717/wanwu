@@ -90,3 +90,11 @@ type GeneralAgentWorkspaceReq struct {
 }
 
 func (c *GeneralAgentWorkspaceReq) Check() error { return nil }
+
+type GeneralAgentCopilotRuntimeReq struct {
+	Method string                 `json:"method"`
+	Params map[string]interface{} `json:"params,omitempty"`
+	Body   map[string]interface{} `json:"body,omitempty"`
+}
+
+func (c *GeneralAgentCopilotRuntimeReq) Check() error { return nil }

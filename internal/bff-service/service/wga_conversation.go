@@ -12,6 +12,7 @@ import (
 
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
+	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
@@ -24,6 +25,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+func GeneralAgentCopilotRuntimeInfo(_ *gin.Context) *response.GeneralAgentCopilotRuntimeInfoResp {
+	return &response.GeneralAgentCopilotRuntimeInfoResp{
+		Version: "0.0.1",
+		Agents: map[string]response.GeneralAgentCopilotRuntimeInfoAgent{
+			"default": {
+				Name:        "万悟通用智能体",
+				Description: "万悟通用智能体",
+				ClassName:   "WGA",
+			},
+		},
+		Mode:                          "sse",
+		AudioFileTranscriptionEnabled: false,
+		A2UIEnabled:                   false,
+	}
+}
 
 func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversationChatReq) error {
 	agentID := config.WgaCfg().AgentID

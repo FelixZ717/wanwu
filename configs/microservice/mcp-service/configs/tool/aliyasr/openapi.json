@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "阿里云 ASR 语音识别",
+    "title": "通义千问 ASR 语音识别",
     "description": "基于阿里云通义千问的语音识别服务，将音频转换为文字",
     "version": "1.0.0"
   },

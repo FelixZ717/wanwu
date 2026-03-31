@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "base64格式文件上传",
+    "title": "Base64文件上传",
     "description": "上传base64格式的文件返回链接",
     "version": "1.0.0"
   },

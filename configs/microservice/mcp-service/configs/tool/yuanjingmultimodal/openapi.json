@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "元景AI大模型能力合集API",
+    "title": "元景-多模态工具",
     "description": "整合了元景-文生图-12B、文生图Qwen-Image-20B、元景-图生图-12B、元景-首尾帧图生视频-14B生成及结果获取接口。",
     "version": "1.0.0"
   },

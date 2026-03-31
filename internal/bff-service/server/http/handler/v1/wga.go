@@ -198,28 +198,6 @@ func CheckGeneralAgentConfig(ctx *gin.Context) {
 	gin_util.Response(ctx, resp, err)
 }
 
-// GeneralAgentConversationChat
-//
-//	@Tags			wga
-//	@Summary		通用智能体对话流
-//	@Description	通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回
-//	@Security		JWT
-//	@Accept			json
-//	@Produce		text/event-stream
-//	@Param			data	body		request.GeneralAgentConversationChatReq	true	"通用智能体对话流请求参数"
-//	@Success		200		{object}	string									"SSE流式返回"
-//	@Router			/general/agent/conversation/chat [post]
-func GeneralAgentConversationChat(ctx *gin.Context) {
-	var req request.GeneralAgentConversationChatReq
-	if !gin_util.Bind(ctx, &req) {
-		return
-	}
-	err := service.GeneralAgentConversationChat(ctx, getUserID(ctx), getOrgID(ctx), req)
-	if err != nil {
-		gin_util.Response(ctx, nil, err)
-	}
-}
-
 // GeneralAgentWorkspaceDownload
 //
 //	@Tags			wga
@@ -292,4 +270,55 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context) {
 	}
 	resp, err := service.GeneralAgentWorkspaceInfo(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, resp, err)
+}
+
+// GeneralAgentCopilotRuntime
+//
+//	@Tags			wga
+//	@Summary		通用智能体CopilotRuntime协议端点
+//	@Description	通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info获取运行时信息
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.GeneralAgentCopilotRuntimeReq		true	"CopilotRuntime请求参数"
+//	@Success		200		{object}	response.GeneralAgentCopilotRuntimeInfoResp	"CopilotRuntime信息"
+//	@Router			/general/agent/copilotkit [post]
+func GeneralAgentCopilotRuntime(ctx *gin.Context) {
+	var req request.GeneralAgentCopilotRuntimeReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+
+	switch req.Method {
+	case "info":
+		resp := service.GeneralAgentCopilotRuntimeInfo(ctx)
+		ctx.JSON(http.StatusOK, resp)
+	default:
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Unknown method: " + req.Method,
+		})
+	}
+}
+
+// GeneralAgentConversationChat
+//
+//	@Tags			wga
+//	@Summary		通用智能体对话流
+//	@Description	通用智能体对话流，用于实时接收用户输入和获取智能体回复，SSE流式返回
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		text/event-stream
+//	@Param			data	body		request.GeneralAgentConversationChatReq	true	"通用智能体对话流请求参数"
+//	@Success		200		{object}	string									"SSE流式返回"
+//	@Router			/general/agent/conversation/chat [post]
+func GeneralAgentConversationChat(ctx *gin.Context) {
+	var req request.GeneralAgentConversationChatReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.GeneralAgentConversationChat(ctx, getUserID(ctx), getOrgID(ctx), req)
+	if err != nil {
+		gin_util.Response(ctx, nil, err)
+	}
 }
