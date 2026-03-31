@@ -48,7 +48,7 @@ export const PROVIDER_OBJ = {
   [DEEPSEEK]: 'DeepSeek',
   [QIANFAN]: i18n.t('modelAccess.type.qianfan'),
   [JINA]: 'Jina',
-  [ZHIPU]: '智谱',
+  [ZHIPU]: i18n.t('modelAccess.type.zhipu'),
 };
 
 export const PROVIDER_IMG_OBJ = {

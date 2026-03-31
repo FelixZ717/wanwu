@@ -552,6 +552,7 @@ export default {
       qianfan: '百度千帆',
       pdfParser: '文档解析服务',
       asr: '语音识别模型',
+      zhipu: '智谱',
     },
     table: {
       scopeType: '公开范围',
