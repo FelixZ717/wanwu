@@ -60,7 +60,7 @@ func main() {
 		log.Fatalf("init es err: %v", err)
 	}
 
-	if err := es.InitESIndexTemplate(ctx); err != nil {
+	if err := es.InitAsistantChatHistoryIndexTemplate(ctx); err != nil {
 		log.Fatalf("init es index template err: %v", err)
 	}
 

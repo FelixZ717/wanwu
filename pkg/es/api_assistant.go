@@ -34,7 +34,7 @@ func Assistant() *client {
 	return _esAssistant
 }
 
-func InitESIndexTemplate(ctx context.Context) error {
+func InitAsistantChatHistoryIndexTemplate(ctx context.Context) error {
 	templateName := "conversation_detail_infos_template"
 
 	// 创建或更新索引模板（每次启动都更新，确保模板是最新的）
@@ -242,8 +242,7 @@ func InitWgaChatHistoryIndexTemplate(ctx context.Context) error {
 						"index": true
 					},
 					"messages": {
-						"type": "keyword",
-						"index": true
+						"type": "keyword"
 					},
 					"createdAt": {
 						"type": "long"
