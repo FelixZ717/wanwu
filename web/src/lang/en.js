@@ -359,7 +359,7 @@ export default {
     },
     upload: {
       upload: '上传文件',
-      hint: '文件格式：json文件',
+      hint: '文件格式：.xlsx文件',
       downloadTemp: '下载模板',
     },
     form: {
