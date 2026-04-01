@@ -163,9 +163,10 @@ export const SHOW_VISION_LIST = [
   OPENAI_API,
 ];
 
+export const CUSTOM_MODEL_ID = 'custom';
 export const DEFAULT_MODEL_ITEM = {
   displayName: i18n.t('modelAccess.custom'),
-  model: 'custom',
+  model: CUSTOM_MODEL_ID,
   tags: [
     {
       text: i18n.t('modelAccess.custom'),

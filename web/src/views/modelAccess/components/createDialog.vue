@@ -51,7 +51,7 @@
         <el-form-item :label="$t('modelAccess.table.model')" prop="model">
           <el-select
             v-if="!isEdit"
-            v-model="modelId"
+            v-model="modelObjStr"
             :placeholder="$t('common.select.placeholder')"
             style="width: 100%"
             @change="handleModelChange"
@@ -61,7 +61,7 @@
               v-if="item.displayName"
               :key="item.model"
               :label="item.displayName"
-              :value="item.model"
+              :value="JSON.stringify(item)"
             >
               <div class="model-option-content">
                 <div class="model-option-content-left">
@@ -86,7 +86,7 @@
             </el-option>
           </el-select>
           <el-input
-            v-if="modelId === 'custom' || isEdit"
+            v-if="currentModelId === customModelId || isEdit"
             :disabled="isEdit"
             v-model="createForm.model"
             :placeholder="$t('common.input.placeholder')"
@@ -412,6 +412,7 @@ import {
   YUAN_JING,
   HUOSHAN,
   SHOW_VISION_LIST,
+  CUSTOM_MODEL_ID,
   DEFAULT_MODEL_ITEM,
   SUPPORT_FILE_TYPE_OBJ,
   IMAGE,
@@ -462,8 +463,10 @@ export default {
         MULTIMODAL_EMBEDDING,
         ASR,
       ],
+      customModelId: CUSTOM_MODEL_ID,
       modelIdList: [DEFAULT_MODEL_ITEM],
-      modelId: '',
+      currentModelId: '',
+      modelObjStr: '',
       createForm: {
         model: '',
         displayName: '',
@@ -649,8 +652,19 @@ export default {
         this.modelIdList = [...list, DEFAULT_MODEL_ITEM];
       });
     },
-    handleModelChange(modelId) {
-      this.createForm.model = modelId !== 'custom' ? modelId : '';
+    handleModelChange(modelObjStr) {
+      const modelObj = modelObjStr ? JSON.parse(modelObjStr) : {};
+      const modelId = modelObj.model || '';
+      // currentModelId 用于判断是否展示出自定义的模型 ID
+      this.currentModelId = modelId;
+      // 根据选择的 model 配置显示
+      this.createForm = {
+        ...this.createForm,
+        model: modelId !== CUSTOM_MODEL_ID ? modelId : '',
+        functionCalling: modelObj.functionCalling || DEFAULT_CALLING,
+        visionSupport: modelObj.visionSupport || DEFAULT_SUPPORT,
+        thinkingSupport: modelObj.think || DEFAULT_SUPPORT,
+      };
     },
     uploadAvatar(file, key) {
       const formData = new FormData();
@@ -711,7 +725,8 @@ export default {
     },
     handleClose() {
       this.dialogVisible = false;
-      this.modelId = '';
+      this.modelObjStr = '';
+      this.currentModelId = '';
       this.formatValue({
         modelType: LLM,
         functionCalling: DEFAULT_CALLING,
