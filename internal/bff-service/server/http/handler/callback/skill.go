@@ -16,7 +16,7 @@ import (
 //	@Produce		json
 //	@Param			data	body		request.SearchBuiltinSkillListReq	true	"请求参数"
 //	@Success		200		{object}	response.Response{data=response.SkillDetailListResp}
-//	@Router			callback/v1/skill/builtin/list [post]
+//	@Router			/callback/v1/skill/builtin/list [post]
 func SearchBuiltInSkillList(ctx *gin.Context) {
 	var req request.SearchBuiltinSkillListReq
 	if !gin_util.Bind(ctx, &req) {

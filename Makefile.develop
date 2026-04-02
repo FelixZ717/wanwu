@@ -31,6 +31,9 @@ unzip-frontend-aibase:
 unzip-frontend-workflow:
 	tar -zxvf frontend/workflow.tar.gz -C frontend
 
+unzip-frontend-wga:
+	tar -zxvf frontend/wga.tar.gz -C frontend
+
 update-frontend:
 	make -f Makefile.develop update-frontend-aibase
 	make -f Makefile.develop update-frontend-workflow
@@ -42,6 +45,10 @@ update-frontend-aibase:
 update-frontend-workflow:
 	rm -r $(WANWU_PROJECT_DIR)/nginx/html/workflow
 	cp -r frontend/workflow $(WANWU_PROJECT_DIR)/nginx/html
+
+update-frontend-wga:
+	rm -r $(WANWU_PROJECT_DIR)/nginx/html/wga
+	cp -r frontend/wga $(WANWU_PROJECT_DIR)/nginx/html
 
 # --- nginx ---
 run-nginx:
