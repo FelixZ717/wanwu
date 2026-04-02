@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
+	"time"
 
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	"github.com/UnicomAI/wanwu/internal/bff-service/service"
 	gin_util "github.com/UnicomAI/wanwu/pkg/gin-util"
-	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/gin-gonic/gin"
 )
 
@@ -372,21 +371,24 @@ func GeneralAgentCopilotRuntime(ctx *gin.Context) {
 			return
 		}
 
-		var builder strings.Builder
+		// FIXME 目前一条条重现，并且delay=5ms；而非一次性全部重现所有sse
+		// var builder strings.Builder
 		for _, run := range resp.List.([]response.GeneralAgentConversationDetailInfo) {
 			for _, event := range run.Events {
 				b, _ := json.Marshal(event)
-				if _, err = builder.WriteString(fmt.Sprintf("data: %v\n\n", string(b))); err != nil {
-					log.Errorf("[wga] agent/connect write string err: %v", err)
-					continue
-				}
+				ctx.Writer.Write([]byte(fmt.Sprintf("data: %v\n\n", string(b))))
+				ctx.Writer.Flush()
+				time.Sleep(time.Millisecond * 5)
+				// if _, err = builder.WriteString(fmt.Sprintf("data: %v\n\n", string(b))); err != nil {
+				// 	log.Errorf("[wga] agent/connect write string err: %v", err)
+				// 	continue
+				// }
 			}
 		}
-
-		if _, err := ctx.Writer.Write([]byte(builder.String())); err != nil {
-			log.Errorf("[wga] agent/connect write sse err: %v", err)
-		}
-		ctx.Writer.Flush()
+		// if _, err := ctx.Writer.Write([]byte(builder.String())); err != nil {
+		// 	log.Errorf("[wga] agent/connect write sse err: %v", err)
+		// }
+		// ctx.Writer.Flush()
 
 	case "agent/run":
 		threadID := req.GetThreadID()

@@ -149,7 +149,15 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	}
 
 	processor := ag_ui_util.NewStreamProcessor(processorConfig)
-	processedEventCh, historyEventCh := processor.Process(ctx.Request.Context(), eventCh, currentUserMessage)
+	processedEventCh, historyEventCh := processor.Process(ctx.Request.Context(), eventCh, map[string]interface{}{
+		"threadId":       req.ThreadID,
+		"runId":          runID,
+		"messages":       []interface{}{currentUserMessage},
+		"state":          map[string]interface{}{},
+		"tools":          []interface{}{},
+		"context":        []interface{}{},
+		"forwardedProps": map[string]interface{}{},
+	})
 
 	// 保存智能体返回的消息
 	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, userId, orgId, req.ThreadID, runID,
