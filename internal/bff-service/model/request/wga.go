@@ -14,8 +14,8 @@ type GetGeneralAgentConversationConfigReq struct {
 func (c *GetGeneralAgentConversationConfigReq) Check() error { return nil }
 
 type CreateGeneralAgentConversationReq struct {
-	Title       string          `json:"title" validate:"required"` // 标题
-	ModelConfig *AppModelConfig `json:"modelConfig"`               // 模型
+	Title       string          `json:"title" validate:"required"`       // 标题
+	ModelConfig *AppModelConfig `json:"modelConfig" validate:"required"` // 模型
 }
 
 func (c *CreateGeneralAgentConversationReq) Check() error { return nil }

@@ -2,6 +2,7 @@ package assistant
 
 import (
 	"context"
+	"encoding/json"
 
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
@@ -12,28 +13,28 @@ import (
 
 // WgaConversationCreate 创建WGA对话
 func (s *Service) WgaConversationCreate(ctx context.Context, req *assistant_service.WgaConversationCreateReq) (*assistant_service.WgaConversationCreateResp, error) {
-	// 创建对话
-	threadId := util.GenUUID()
-	conversation := &model.WgaConversation{
-		ThreadId:         threadId,
-		Title:            req.Prompt,
-		ConversationType: req.ConversationType,
-		UserId:           req.Identity.UserId,
-		OrgId:            req.Identity.OrgId,
-	}
-
-	if status := s.cli.CreateWgaConversation(ctx, conversation); status != nil {
-		return nil, errStatus(errs.Code_AssistantConversationErr, status)
-	}
-
 	// 创建对话配置
-	_, err := s.UpdateWgaConversationConfig(ctx, &assistant_service.UpdateWgaConversationConfigReq{
-		ThreadId:    threadId,
-		ModelConfig: req.ModelConfig,
-		Identity:    req.Identity,
-	})
-	if err != nil {
-		return nil, err
+	threadId := util.GenUUID()
+
+	var modelConfigStr string
+	if req.ModelConfig != nil {
+		modelConfigBytes, _ := json.Marshal(req.ModelConfig)
+		modelConfigStr = string(modelConfigBytes)
+	} else {
+		// 设置为有效的 JSON null 值
+		modelConfigStr = "null"
+	}
+
+	config := &model.WgaConversationConfig{
+		ThreadID:    threadId,
+		Title:       req.Prompt,
+		UserID:      req.Identity.UserId,
+		OrgID:       req.Identity.OrgId,
+		ModelConfig: modelConfigStr,
+	}
+
+	if status := s.cli.CreateWgaConversationConfig(ctx, config); status != nil {
+		return nil, errStatus(errs.Code_WgaConversationGetErr, status)
 	}
 
 	return &assistant_service.WgaConversationCreateResp{
@@ -43,8 +44,8 @@ func (s *Service) WgaConversationCreate(ctx context.Context, req *assistant_serv
 
 // WgaConversationDelete 删除WGA对话
 func (s *Service) WgaConversationDelete(ctx context.Context, req *assistant_service.WgaConversationDeleteReq) (*emptypb.Empty, error) {
-	if status := s.cli.DeleteWgaConversation(ctx, req.ThreadId); status != nil {
-		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+	if status := s.cli.DeleteWgaConversationConfig(ctx, req.ThreadId); status != nil {
+		return nil, errStatus(errs.Code_WgaConversationGetErr, status)
 	}
 	return &emptypb.Empty{}, nil
 }
@@ -53,17 +54,17 @@ func (s *Service) WgaConversationDelete(ctx context.Context, req *assistant_serv
 func (s *Service) WgaConversationList(ctx context.Context, req *assistant_service.WgaConversationListReq) (*assistant_service.WgaConversationListResp, error) {
 	offset := (req.PageNo - 1) * req.PageSize
 
-	conversations, total, status := s.cli.GetWgaConversationList(ctx, req.ConversationType, req.Identity.UserId, req.Identity.OrgId, offset, req.PageSize)
+	configs, total, status := s.cli.GetWgaConversationConfigList(ctx, req.Identity.UserId, req.Identity.OrgId, offset, req.PageSize)
 	if status != nil {
-		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+		return nil, errStatus(errs.Code_WgaConversationGetErr, status)
 	}
 
 	var conversationInfos []*assistant_service.WgaConversationInfo
-	for _, conversation := range conversations {
+	for _, config := range configs {
 		conversationInfos = append(conversationInfos, &assistant_service.WgaConversationInfo{
-			ThreadId:  conversation.ThreadId,
-			Title:     conversation.Title,
-			CreatedAt: conversation.CreatedAt,
+			ThreadId:  config.ThreadID,
+			Title:     config.Title,
+			CreatedAt: config.CreatedAt,
 		})
 	}
 
@@ -77,9 +78,9 @@ func (s *Service) WgaConversationList(ctx context.Context, req *assistant_servic
 
 // WgaConversationExists 检查WGA对话是否存在
 func (s *Service) WgaConversationExists(ctx context.Context, req *assistant_service.WgaConversationExistsReq) (*assistant_service.WgaConversationExistsResp, error) {
-	exists, status := s.cli.WgaConversationExists(ctx, req.ThreadId, req.Identity.UserId, req.Identity.OrgId)
+	exists, status := s.cli.WgaConversationConfigExists(ctx, req.ThreadId, req.Identity.UserId, req.Identity.OrgId)
 	if status != nil {
-		return nil, errStatus(errs.Code_AssistantConversationErr, status)
+		return nil, errStatus(errs.Code_WgaConversationGetErr, status)
 	}
 	return &assistant_service.WgaConversationExistsResp{
 		Exists: exists,

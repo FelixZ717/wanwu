@@ -88,15 +88,15 @@ type IClient interface {
 	DeleteSkillConversation(ctx context.Context, conversationId, userId, orgId string) *err_code.Status
 	GetSkillConversationList(ctx context.Context, userId, orgId string, pageNo, pageSize int) ([]*model.SkillConversation, int64, *err_code.Status)
 
-	//=================WgaConfig================
+	//=================WgaConversationConfig================
 	GetWgaConversationConfig(ctx context.Context, threadId string, userId, orgId string) (*model.WgaConversationConfig, *err_code.Status)
 	UpdateWgaConversationConfig(ctx context.Context, config *model.WgaConversationConfig) *err_code.Status
+	CreateWgaConversationConfig(ctx context.Context, config *model.WgaConversationConfig) *err_code.Status
+	DeleteWgaConversationConfig(ctx context.Context, threadId string) *err_code.Status
+	GetWgaConversationConfigList(ctx context.Context, userID, orgID string, offset, limit int32) ([]*model.WgaConversationConfig, int64, *err_code.Status)
+	WgaConversationConfigExists(ctx context.Context, threadId, userID, orgID string) (bool, *err_code.Status)
+
+	//=================WgaConfig================
 	GetWgaConfig(ctx context.Context, userId, orgId string) (*model.WgaConfig, *err_code.Status)
 	UpdateWgaConfig(ctx context.Context, config *model.WgaConfig) *err_code.Status
-
-	//=================WgaConversation================
-	CreateWgaConversation(ctx context.Context, conversation *model.WgaConversation) *err_code.Status
-	DeleteWgaConversation(ctx context.Context, threadId string) *err_code.Status
-	GetWgaConversationList(ctx context.Context, conversationType, userID, orgID string, offset, limit int32) ([]*model.WgaConversation, int64, *err_code.Status)
-	WgaConversationExists(ctx context.Context, threadId, userID, orgID string) (bool, *err_code.Status)
 }

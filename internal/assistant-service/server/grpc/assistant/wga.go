@@ -7,17 +7,16 @@ import (
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	"github.com/UnicomAI/wanwu/internal/assistant-service/client/model"
-	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (s *Service) GetWgaConversationConfig(ctx context.Context, req *assistant_service.GetWgaConversationConfigReq) (*assistant_service.GetWgaConversationConfigResp, error) {
 	if req.ThreadId == "" {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConversationGetErr, "thread_id is required")
+		return nil, errStatus(errs.Code_WgaConversationGetErr, toErrStatus("wga_conversation_get", "thread_id is required"))
 	}
 	if req.Identity == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConversationGetErr, "identity is required")
+		return nil, errStatus(errs.Code_WgaConversationGetErr, toErrStatus("wga_conversation_get", "identity is required"))
 	}
 
 	config, status := s.cli.GetWgaConversationConfig(ctx, req.ThreadId, req.Identity.UserId, req.Identity.OrgId)
@@ -33,10 +32,10 @@ func (s *Service) GetWgaConversationConfig(ctx context.Context, req *assistant_s
 
 func (s *Service) UpdateWgaConversationConfig(ctx context.Context, req *assistant_service.UpdateWgaConversationConfigReq) (*emptypb.Empty, error) {
 	if req.ThreadId == "" {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConversationUpdateErr, "thread_id is required")
+		return nil, errStatus(errs.Code_WgaConversationUpdateErr, toErrStatus("wga_conversation_update", "thread_id is required"))
 	}
 	if req.Identity == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConversationUpdateErr, "identity is required")
+		return nil, errStatus(errs.Code_WgaConversationUpdateErr, toErrStatus("wga_conversation_update", "identity is required"))
 	}
 
 	modelConfigBytes, _ := json.Marshal(req.ModelConfig)
@@ -59,7 +58,7 @@ func (s *Service) UpdateWgaConversationConfig(ctx context.Context, req *assistan
 
 func (s *Service) GetWgaConfig(ctx context.Context, req *assistant_service.GetWgaConfigReq) (*assistant_service.GetWgaConfigResp, error) {
 	if req.Identity == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigGetErr, "identity is required")
+		return nil, errStatus(errs.Code_WgaConfigGetErr, toErrStatus("wga_config_get", "identity is required"))
 	}
 
 	config, status := s.cli.GetWgaConfig(ctx, req.Identity.UserId, req.Identity.OrgId)
@@ -75,7 +74,7 @@ func (s *Service) GetWgaConfig(ctx context.Context, req *assistant_service.GetWg
 
 func (s *Service) UpdateWgaConfig(ctx context.Context, req *assistant_service.UpdateWgaConfigReq) (*emptypb.Empty, error) {
 	if req.Identity == nil {
-		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigUpdateErr, "identity is required")
+		return nil, errStatus(errs.Code_WgaConfigUpdateErr, toErrStatus("wga_config_update", "identity is required"))
 	}
 
 	toolListJSON, _ := json.Marshal(req.ToolList)
@@ -100,6 +99,7 @@ func (s *Service) UpdateWgaConfig(ctx context.Context, req *assistant_service.Up
 func toProtoWgaConversationConfig(m *model.WgaConversationConfig) *assistant_service.WgaConversationConfig {
 	config := &assistant_service.WgaConversationConfig{
 		ThreadId:  m.ThreadID,
+		Title:     m.Title,
 		UserId:    m.UserID,
 		OrgId:     m.OrgID,
 		CreatedAt: m.CreatedAt,

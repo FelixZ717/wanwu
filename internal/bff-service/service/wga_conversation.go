@@ -12,15 +12,12 @@ import (
 	"time"
 
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
-	model_service "github.com/UnicomAI/wanwu/api/proto/model-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
 	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
 	"github.com/UnicomAI/wanwu/pkg/log"
-	mp "github.com/UnicomAI/wanwu/pkg/model-provider"
-	mp_common "github.com/UnicomAI/wanwu/pkg/model-provider/mp-common"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/wga"
 	wga_persistent "github.com/UnicomAI/wanwu/pkg/wga-persistent"
@@ -86,21 +83,11 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 			OrgId:  orgId,
 		},
 	})
-
-	//if err != nil {
-	//	return err
-	//}
-	//wgaUserConfig := wgaConfigResp.Config
-
-	// TODO测试用
-	var wgaConversationConfig *assistant_service.WgaConversationConfig
-	var wgaConfig *assistant_service.WgaConfig
 	if err != nil {
-		log.Warnf("get WGA config failed: %v", err)
-	} else {
-		wgaConversationConfig = wgaConversationConfigResp.Config
-		wgaConfig = wgaConfigResp.Config
+		return err
 	}
+	wgaConversationConfig := wgaConversationConfigResp.Config
+	wgaConfig := wgaConfigResp.Config
 
 	// 过滤消息
 	messages := filterMessages(req.Messages)
@@ -202,58 +189,63 @@ func buildWgaOptionsFromUserConfig(ctx *gin.Context, wgaConversationConfig *assi
 		}),
 	}
 
+	// 校验并构建模型配置选项
+	modelConfigValid := false
 	if wgaConversationConfig != nil && wgaConversationConfig.ModelConfig != nil && wgaConversationConfig.ModelConfig.ModelId != "" {
-		modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: wgaConversationConfig.ModelConfig.ModelId})
-		if err != nil {
-			return nil, err
-		}
-		endpoint := mp.ToModelEndpoint(wgaConversationConfig.ModelConfig.ModelId, wgaConversationConfig.ModelConfig.Model)
-		modelURL, _ := endpoint["model_url"].(string)
-		var APIKey string
-		modelConfig, err := mp.ToModelConfig(modelInfo.Provider, modelInfo.ModelType, modelInfo.ProviderConfig)
-		if err == nil {
-			cfg := make(map[string]any)
-			if b, err := json.Marshal(modelConfig); err == nil {
-				if err = json.Unmarshal(b, &cfg); err == nil {
-					if apiKey, ok := cfg["apiKey"].(string); ok {
-						APIKey = apiKey
-					}
-				}
+		if err := checkModelConfigFromProto(ctx, wgaConversationConfig.GetModelConfig()); err == nil {
+			modelOpt, err := buildModelOption(ctx, wgaConversationConfig.ModelConfig)
+			if err == nil {
+				opts = append(opts, modelOpt)
+				modelConfigValid = true
 			}
-		}
-		var modelParams *mp_common.LLMParams
-		if wgaConversationConfig.ModelConfig.Config != "" {
-			llmParams, _, err := mp.ToModelParams(wgaConversationConfig.ModelConfig.Provider, wgaConversationConfig.ModelConfig.ModelType, wgaConversationConfig.ModelConfig.Config)
-			if err == nil && llmParams != nil {
-				modelParams = llmParams.(*mp_common.LLMParams)
-			}
-		}
-		opts = append(opts, wga_option.WithModelConfig(wga_option.ModelConfig{
-			Provider:     wgaConversationConfig.ModelConfig.Provider,
-			ProviderName: wgaConversationConfig.ModelConfig.Provider,
-			BaseURL:      modelURL,
-			APIKey:       APIKey,
-			Model:        wgaConversationConfig.ModelConfig.Model,
-			ModelName:    wgaConversationConfig.ModelConfig.Model,
-			Params:       modelParams,
-		}))
-		log.Infof("[modelConfig] modelConfig=%v,modelURL=%s,apiKey=%s,modelParams=%v", wgaConversationConfig.ModelConfig, modelURL, APIKey, modelParams)
-	} else {
-		opts = []wga_option.Option{
-			wga_option.WithModelConfig(wga_option.ModelConfig{
-				Provider:     config.WgaCfg().Model.Provider,
-				ProviderName: config.WgaCfg().Model.ProviderName,
-				BaseURL:      config.WgaCfg().Model.BaseURL,
-				APIKey:       config.WgaCfg().Model.APIKey,
-				Model:        config.WgaCfg().Model.Model,
-				ModelName:    config.WgaCfg().Model.Model,
-			}),
-			wga_option.WithRunSession(wga_option.RunSession{
-				ThreadID: threadID,
-				RunID:    runID,
-			}),
 		}
 	}
+
+	// 用户模型配置无效，尝试使用默认配置
+	if !modelConfigValid {
+		defaultModelConfig := config.WgaCfg().Model
+		if defaultModelConfig.Model != "" && defaultModelConfig.BaseURL != "" {
+			opts = append(opts, wga_option.WithModelConfig(wga_option.ModelConfig{
+				Provider:     defaultModelConfig.Provider,
+				ProviderName: defaultModelConfig.ProviderName,
+				BaseURL:      defaultModelConfig.BaseURL,
+				APIKey:       defaultModelConfig.APIKey,
+				Model:        defaultModelConfig.Model,
+				ModelName:    defaultModelConfig.ModelName,
+			}))
+		} else {
+			return nil, fmt.Errorf("model config is required: user config invalid and default config not set")
+		}
+	}
+
+	// 校验并构建工具配置选项
+	toolConfigValid := false
+	if wgaConfig != nil && len(wgaConfig.ToolList) > 0 {
+		if err := checkWgaToolConfig(ctx, wgaConfig.UserId, wgaConfig.OrgId, wgaConfig.ToolList); err == nil {
+			toolOpts, err := buildToolOptions(ctx, wgaConfig.UserId, wgaConfig.OrgId, wgaConfig.ToolList)
+			if err == nil {
+				opts = append(opts, toolOpts...)
+				toolConfigValid = true
+			}
+		}
+	}
+
+	// 用户工具配置无效，尝试使用默认配置
+	if !toolConfigValid {
+		defaultTools := config.WgaCfg().Tools
+		if len(defaultTools) > 0 {
+			for _, tool := range defaultTools {
+				opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
+					Title:   tool.Title,
+					APIAuth: &tool.APIAuth,
+				}))
+			}
+		} else {
+			return nil, fmt.Errorf("tool list is required: user config invalid and default config not set")
+		}
+	}
+
+	// TODO 智能体配置
 
 	// 持久化存储
 	if config.WgaCfg().Persistent.Enabled {
@@ -292,52 +284,6 @@ func buildWgaOptionsFromUserConfig(ctx *gin.Context, wgaConversationConfig *assi
 		}
 		opts = append(opts, wga_option.WithMessages(msgs))
 	}
-
-	// 工具信息使用config
-	for _, tool := range config.WgaCfg().Tools {
-		opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
-			Title:   tool.Title,
-			APIAuth: &tool.APIAuth,
-		}))
-	}
-
-	// 工具信息
-	//for _, tool := range wgaConfig.ToolList {
-	//	switch tool.ToolType {
-	//	case constant.ToolTypeBuiltIn:
-	//		toolResp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-	//			ToolSquareId: tool.ToolId,
-	//			Identity: &mcp_service.Identity{
-	//				UserId: wgaConfig.UserId,
-	//				OrgId:  wgaConfig.OrgId,
-	//			},
-	//		})
-	//		if err != nil {
-	//			log.Warnf("[wga] failed to get tool: %v", err)
-	//			continue
-	//		}
-	//		toolDetail := toToolSquareDetail(ctx, toolResp)
-	//
-	//		authType := toolDetail.ApiAuth.AuthType
-	//		if authType == "" {
-	//			authType = util.AuthTypeNone
-	//		}
-	//		apiAuth := &util.ApiAuthWebRequest{
-	//			AuthType:           authType,
-	//			ApiKeyHeaderPrefix: toolDetail.ApiAuth.ApiKeyHeaderPrefix,
-	//			ApiKeyHeader:       toolDetail.ApiAuth.ApiKeyHeader,
-	//			ApiKeyQueryParam:   toolDetail.ApiAuth.ApiKeyQueryParam,
-	//			ApiKeyValue:        toolDetail.ApiAuth.ApiKeyValue,
-	//		}
-	//
-	//		opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
-	//			Title:   toolDetail.ToolSquareInfo.Name,
-	//			APIAuth: apiAuth,
-	//		}))
-	//	}
-	//}
-
-	// TODO 智能体配置
 
 	return opts, nil
 }
