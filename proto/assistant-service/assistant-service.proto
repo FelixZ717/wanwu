@@ -868,7 +868,7 @@ message SkillConversationItem {
 // --- wga conversation messages ---
 message WgaConversationCreateReq {
   string prompt = 1;
-  WgaModelConfig modelConfig = 2;
+  common.AppModelConfig modelConfig = 2;
   Identity identity = 3;
 }
 
@@ -920,18 +920,10 @@ message WgaConfigAssistant {
   string assistantType = 2;
 }
 
-message WgaModelConfig {
-  string modelId = 1;
-  string provider = 2;
-  string model = 3;
-  string modelType = 4;
-  string config = 5;
-}
-
 message WgaConversationConfig {
   string threadId = 1;
   string title = 2;
-  WgaModelConfig modelConfig = 3;
+  common.AppModelConfig modelConfig = 3;
   string userId = 4;
   string orgId = 5;
   int64 createdAt = 6;
@@ -958,7 +950,7 @@ message GetWgaConversationConfigResp {
 
 message UpdateWgaConversationConfigReq {
   string threadId = 1;
-  WgaModelConfig modelConfig = 2;
+  common.AppModelConfig modelConfig = 2;
   Identity identity = 3;
 }
 

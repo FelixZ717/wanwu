@@ -10,6 +10,7 @@ import (
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
+	"github.com/UnicomAI/wanwu/api/proto/common"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	model_service "github.com/UnicomAI/wanwu/api/proto/model-service"
@@ -74,13 +75,13 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 		}
 	}
 
-	agentCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
+	toolCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]response.GetGeneralAgentToolSelectResp, 0, len(agentCategories))
-	for _, tc := range agentCategories {
+	result := make([]response.GetGeneralAgentToolSelectResp, 0, len(toolCategories))
+	for _, tc := range toolCategories {
 		categoryResp := response.GetGeneralAgentToolSelectResp{
 			Category:  tc.Category,
 			Condition: string(tc.Condition),
@@ -111,99 +112,6 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 
 	return result, nil
 
-}
-
-func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
-	// 验证 tool 和 assistant 配置
-	if err := checkWgaToolAndAssistantConfig(ctx, userId, orgId, req); err != nil {
-		return err
-	}
-
-	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
-	for _, t := range req.ToolList {
-		toolList = append(toolList, &assistant_service.WgaConfigTool{
-			ToolId:   t.ToolID,
-			ToolType: t.ToolType,
-		})
-	}
-
-	assistantList := make([]*assistant_service.WgaConfigAssistant, 0, len(req.AssistantList))
-	for _, a := range req.AssistantList {
-		assistantList = append(assistantList, &assistant_service.WgaConfigAssistant{
-			AssistantId:   a.AssistantID,
-			AssistantType: a.AssistantType,
-		})
-	}
-
-	_, err := assistant.UpdateWgaConfig(ctx.Request.Context(), &assistant_service.UpdateWgaConfigReq{
-		ToolList:      toolList,
-		AssistantList: assistantList,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	return err
-}
-
-func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.GetGeneralAgentConfigResp, error) {
-	resp, err := assistant.GetWgaConfig(ctx.Request.Context(), &assistant_service.GetWgaConfigReq{
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	result := &response.GetGeneralAgentConfigResp{}
-
-	// 过滤存在的 tool
-	validToolIds := make(map[string]bool)
-	for _, t := range resp.Config.ToolList {
-		// 验证 tool 是否存在
-		if t.ToolType == constant.ToolTypeBuiltIn {
-			_, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-				ToolSquareId: t.ToolId,
-				Identity: &mcp_service.Identity{
-					UserId: userId,
-					OrgId:  orgId,
-				},
-			})
-			if err != nil {
-				// tool 不存在，跳过
-				continue
-			}
-		}
-		validToolIds[t.ToolId] = true
-		result.ToolList = append(result.ToolList, request.ToolSelected{
-			ToolID:   t.ToolId,
-			ToolType: t.ToolType,
-		})
-	}
-
-	// 过滤存在的 assistant
-	for _, a := range resp.Config.AssistantList {
-		// 验证 assistant 是否存在
-		assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
-			AssistantIdList: []string{a.AssistantId},
-			Identity: &assistant_service.Identity{
-				UserId: userId,
-				OrgId:  orgId,
-			},
-		})
-		if err != nil || len(assistantResp.AssistantInfos) == 0 {
-			// assistant 不存在，跳过
-			continue
-		}
-		result.AssistantList = append(result.AssistantList, request.AssistantSelected{
-			AssistantID:   a.AssistantId,
-			AssistantType: a.AssistantType,
-		})
-	}
-
-	return result, nil
 }
 
 func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType string) (*response.GeneralAgentToolInfoResp, error) {
@@ -244,30 +152,120 @@ func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType s
 	}, nil
 }
 
+func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
+	// 校验 assistant 配置
+	assistantList := make([]*assistant_service.WgaConfigAssistant, 0, len(req.AssistantList))
+	for _, a := range req.AssistantList {
+		assistantList = append(assistantList, &assistant_service.WgaConfigAssistant{
+			AssistantId:   a.AssistantID,
+			AssistantType: a.AssistantType,
+		})
+	}
+	if err := checkWgaAssistantConfig(ctx, userId, orgId, assistantList); err != nil {
+		return err
+	}
+	// 校验 tool 配置
+	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
+	for _, t := range req.ToolList {
+		toolList = append(toolList, &assistant_service.WgaConfigTool{
+			ToolId:   t.ToolID,
+			ToolType: t.ToolType,
+		})
+	}
+	if err := checkWgaToolConfig(ctx, userId, orgId, toolList); err != nil {
+		return err
+	}
+
+	_, err := assistant.UpdateWgaConfig(ctx.Request.Context(), &assistant_service.UpdateWgaConfigReq{
+		ToolList:      toolList,
+		AssistantList: assistantList,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	return err
+}
+
+func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.GetGeneralAgentConfigResp, error) {
+	resp, err := assistant.GetWgaConfig(ctx.Request.Context(), &assistant_service.GetWgaConfigReq{
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := &response.GetGeneralAgentConfigResp{}
+
+	// 过滤存在的 tool
+	for _, t := range resp.Config.ToolList {
+		if t.ToolType == constant.ToolTypeBuiltIn {
+			_, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
+				ToolSquareId: t.ToolId,
+				Identity: &mcp_service.Identity{
+					UserId: userId,
+					OrgId:  orgId,
+				},
+			})
+			if err != nil {
+				continue
+			}
+		}
+		result.ToolList = append(result.ToolList, request.ToolSelected{
+			ToolID:   t.ToolId,
+			ToolType: t.ToolType,
+		})
+	}
+
+	// 过滤存在的 assistant
+	assistantIds := make([]string, 0, len(resp.Config.AssistantList))
+	for _, a := range resp.Config.AssistantList {
+		assistantIds = append(assistantIds, a.AssistantId)
+	}
+
+	if len(assistantIds) > 0 {
+		assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
+			AssistantIdList: assistantIds,
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+		if err == nil && len(assistantResp.AssistantInfos) > 0 {
+			validAssistantIds := make(map[string]bool)
+			for _, info := range assistantResp.AssistantInfos {
+				validAssistantIds[info.Info.AppId] = true
+			}
+			for _, a := range resp.Config.AssistantList {
+				if validAssistantIds[a.AssistantId] {
+					result.AssistantList = append(result.AssistantList, request.AssistantSelected{
+						AssistantID:   a.AssistantId,
+						AssistantType: a.AssistantType,
+					})
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
 func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.CreateGeneralAgentConversationReq) (*response.CreateGeneralAgentConversationResp, error) {
 	if err := checkModelConfig(ctx, req.ModelConfig); err != nil {
 		return nil, err
 	}
 
-	var modelConfig *assistant_service.WgaModelConfig
-	if req.ModelConfig != nil && req.ModelConfig.ModelId != "" {
-		var configJSON string
-		if req.ModelConfig.Config != nil {
-			configBytes, _ := json.Marshal(req.ModelConfig.Config)
-			configJSON = string(configBytes)
-		}
-		modelConfig = &assistant_service.WgaModelConfig{
+	resp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
+		Prompt: req.Title,
+		ModelConfig: &common.AppModelConfig{
 			ModelId:   req.ModelConfig.ModelId,
 			Provider:  req.ModelConfig.Provider,
 			Model:     req.ModelConfig.Model,
 			ModelType: req.ModelConfig.ModelType,
-			Config:    configJSON,
-		}
-	}
-
-	resp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
-		Prompt:      req.Title,
-		ModelConfig: modelConfig,
+		},
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -277,6 +275,35 @@ func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 		return nil, err
 	}
 	return &response.CreateGeneralAgentConversationResp{ThreadID: resp.ThreadId}, nil
+}
+
+func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.DeleteGeneralAgentConversationReq) error {
+	// 删除对话记录
+	_, err := assistant.WgaConversationDelete(ctx.Request.Context(), &assistant_service.WgaConversationDeleteReq{
+		ThreadId: req.ThreadID,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// 同步删除 ES 中的聊天历史
+	_, err = assistant.DeleteFromES(ctx.Request.Context(), &assistant_service.DeleteFromESReq{
+		IndexName: wgaConversationHistoryEventESIndexName,
+		Conditions: map[string]string{
+			"threadId": req.ThreadID,
+			"userId":   userId,
+			"orgId":    orgId,
+		},
+	})
+	if err != nil {
+		log.Errorf("[wga] thread %v delete chat history from ES err: %v", req.ThreadID, err)
+	}
+
+	return nil
 }
 
 func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationListReq) (*response.ListResult, error) {
@@ -303,7 +330,6 @@ func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req
 }
 
 func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId, threadId string) (*response.ListResult, error) {
-
 	exist, err := assistant.WgaConversationExists(ctx.Request.Context(), &assistant_service.WgaConversationExistsReq{
 		ThreadId: threadId,
 		Identity: &assistant_service.Identity{UserId: userId, OrgId: orgId},
@@ -350,7 +376,7 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId, threadId
 		if eventsStr, ok := doc["events"].(string); ok {
 			var events []interface{}
 			if err := json.Unmarshal([]byte(eventsStr), &events); err != nil {
-				log.Errorf("[wga] unmarshal thread %v events err: %v", threadId, err)
+				log.Errorf("[wga] thread %v unmarshal events err: %v", threadId, err)
 				continue
 			}
 			info.Events = events
@@ -359,35 +385,6 @@ func GetGeneralAgentConversationDetail(ctx *gin.Context, userId, orgId, threadId
 	}
 
 	return &response.ListResult{List: result, Total: int64(len(result))}, nil
-}
-
-func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.DeleteGeneralAgentConversationReq) error {
-	// 删除对话记录
-	_, err := assistant.WgaConversationDelete(ctx.Request.Context(), &assistant_service.WgaConversationDeleteReq{
-		ThreadId: req.ThreadID,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	// 同步删除 ES 中的聊天历史
-	_, err = assistant.DeleteFromES(ctx.Request.Context(), &assistant_service.DeleteFromESReq{
-		IndexName: wgaConversationHistoryEventESIndexName,
-		Conditions: map[string]string{
-			"threadId": req.ThreadID,
-			"userId":   userId,
-			"orgId":    orgId,
-		},
-	})
-	if err != nil {
-		log.Warnf("[wga] failed to delete chat history from ES: %v", err)
-	}
-
-	return nil
 }
 
 // GetGeneralAgentConversationConfig 获取WGA对话配置
@@ -420,13 +417,7 @@ func GetGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, r
 				Model:       wgaConfig.ModelConfig.Model,
 				ModelId:     wgaConfig.ModelConfig.ModelId,
 				ModelType:   wgaConfig.ModelConfig.ModelType,
-				DisplayName: wgaConfig.ModelConfig.Model,
-			}
-			if wgaConfig.ModelConfig.Config != "" {
-				var modelConfig interface{}
-				if err := json.Unmarshal([]byte(wgaConfig.ModelConfig.Config), &modelConfig); err == nil {
-					result.ModelConfig.Config = modelConfig
-				}
+				DisplayName: modelInfo.DisplayName,
 			}
 		}
 		// 如果模型不存在，返回空的 ModelConfig
@@ -435,8 +426,28 @@ func GetGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, r
 	return result, nil
 }
 
-// CheckGeneralAgentConfig 检查WGA对话配置
-func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConfigCheckRequest) (*response.GeneralAgentConfigCheckResponse, error) {
+func UpdateGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConversationConfigReq) error {
+	if err := checkModelConfig(ctx, req.ModelConfig); err != nil {
+		return err
+	}
+	_, err := assistant.UpdateWgaConversationConfig(ctx.Request.Context(), &assistant_service.UpdateWgaConversationConfigReq{
+		ThreadId: req.ThreadID,
+		ModelConfig: &common.AppModelConfig{
+			ModelId:   req.ModelConfig.ModelId,
+			Provider:  req.ModelConfig.Provider,
+			Model:     req.ModelConfig.Model,
+			ModelType: req.ModelConfig.ModelType,
+		},
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	return err
+}
+
+// CheckGeneralAgentConversationConfig 检查WGA对话配置
+func CheckGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConfigCheckRequest) (*response.GeneralAgentConfigCheckResponse, error) {
 	// 查询对话配置
 	conversationConfigResp, err := assistant.GetWgaConversationConfig(ctx.Request.Context(), &assistant_service.GetWgaConversationConfigReq{
 		ThreadId: req.ThreadID,
@@ -466,7 +477,7 @@ func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request
 
 	// 构建模型配置选项
 	if wgaConversationConfig.GetModelConfig() != nil && wgaConversationConfig.ModelConfig.ModelId != "" {
-		modelOpt, err := buildModelOption(ctx, wgaConversationConfig.ModelConfig)
+		modelOpt, err := buildWgaModelOption(ctx, wgaConversationConfig.ModelConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -474,7 +485,7 @@ func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request
 	}
 
 	// 构建工具配置选项
-	toolOpts, err := buildToolOptions(ctx, userId, orgId, wgaConfig.ToolList)
+	toolOpts, err := buildWgaToolOptions(ctx, userId, orgId, wgaConfig.ToolList)
 	if err != nil {
 		return nil, err
 	}
@@ -519,45 +530,13 @@ func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request
 	return result, nil
 }
 
-func UpdateGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConversationConfigReq) error {
-	if err := checkModelConfig(ctx, req.ModelConfig); err != nil {
-		return err
-	}
-
-	var modelConfig *assistant_service.WgaModelConfig
-	if req.ModelConfig != nil && req.ModelConfig.ModelId != "" {
-		var configJSON string
-		if req.ModelConfig.Config != nil {
-			configBytes, _ := json.Marshal(req.ModelConfig.Config)
-			configJSON = string(configBytes)
-		}
-		modelConfig = &assistant_service.WgaModelConfig{
-			ModelId:   req.ModelConfig.ModelId,
-			Provider:  req.ModelConfig.Provider,
-			Model:     req.ModelConfig.Model,
-			ModelType: req.ModelConfig.ModelType,
-			Config:    configJSON,
-		}
-	}
-
-	_, err := assistant.UpdateWgaConversationConfig(ctx.Request.Context(), &assistant_service.UpdateWgaConversationConfigReq{
-		ThreadId:    req.ThreadID,
-		ModelConfig: modelConfig,
-		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
-		},
-	})
-	return err
-}
-
 func GeneralAgentWorkspaceDownload(ctx *gin.Context, userId, orgId string, req request.GeneralAgentWorkspaceDownloadReq) (string, []byte, error) {
 	cfg := config.WgaCfg()
 	if !cfg.Persistent.Enabled {
 		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "persistent not enabled")
 	}
 
-	store, err := wga_persistent.NewStore(wga_persistent.ModeVersioned, cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
 	if err != nil {
 		return "", nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
 	}
@@ -604,7 +583,7 @@ func GeneralAgentWorkspacePreview(ctx *gin.Context, userId, orgId string, req re
 		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, "persistent not enabled")
 	}
 
-	store, err := wga_persistent.NewStore(wga_persistent.ModeVersioned, cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
 	if err != nil {
 		return "", nil, "", grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
 	}
@@ -644,7 +623,7 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req reque
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "persistent not enabled")
 	}
 
-	store, err := wga_persistent.NewStore(wga_persistent.ModeVersioned, cfg.Persistent.BaseDir, req.ThreadID)
+	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, err.Error())
 	}
@@ -658,7 +637,7 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req reque
 	}
 
 	workDir := info.Dir
-	files, err := buildFileTree(workDir, "")
+	files, err := buildWgaFileTree(workDir, "")
 	if err != nil {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, fmt.Sprintf("failed to read directory: %v", err))
 	}
@@ -668,7 +647,7 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req reque
 			ThreadID:  req.ThreadID,
 			RunID:     req.RunID,
 			FileCount: int32(len(files)),
-			TotalSize: calculateTotalSize(files),
+			TotalSize: calculateWgaFileTreeTotalSize(files),
 			IsDisplay: true,
 		},
 		Path:  "",
@@ -679,30 +658,30 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req reque
 // --- internal ---
 
 // checkModelConfig 校验请求中的模型配置（用于创建/更新对话配置）
-func checkModelConfig(ctx *gin.Context, req *request.AppModelConfig) error {
-	if req == nil {
+func checkModelConfig(ctx *gin.Context, modelConfig *request.AppModelConfig) error {
+	if modelConfig == nil {
 		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelConfig is required")
 	}
-	if req.ModelId == "" {
+	if modelConfig.ModelId == "" {
 		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelId is required")
 	}
-	if req.Model == "" {
+	if modelConfig.Model == "" {
 		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "model is required")
 	}
 	// 校验模型是否存在
-	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: req.ModelId})
+	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: modelConfig.ModelId})
 	if err != nil {
-		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model not found: %s", req.ModelId))
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model not found: %s", modelConfig.ModelId))
 	}
 	// 校验 model 名称是否匹配
-	if modelInfo.Model != req.Model {
-		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model name mismatch: expected %s, got %s", modelInfo.Model, req.Model))
+	if modelInfo.Model != modelConfig.Model {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model name mismatch: expected %s, got %s", modelInfo.Model, modelConfig.Model))
 	}
 	return nil
 }
 
 // checkModelConfigFromProto 校验proto类型的模型配置（用于运行时检查）
-func checkModelConfigFromProto(ctx *gin.Context, modelConfig *assistant_service.WgaModelConfig) error {
+func checkModelConfigFromProto(ctx *gin.Context, modelConfig *common.AppModelConfig) error {
 	if modelConfig == nil || modelConfig.ModelId == "" {
 		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelConfig is required for conversation")
 	}
@@ -716,8 +695,8 @@ func checkModelConfigFromProto(ctx *gin.Context, modelConfig *assistant_service.
 	return nil
 }
 
-// buildModelOption 构建模型配置选项
-func buildModelOption(ctx *gin.Context, modelConfig *assistant_service.WgaModelConfig) (wga_option.Option, error) {
+// buildWgaModelOption 构建模型配置选项
+func buildWgaModelOption(ctx *gin.Context, modelConfig *common.AppModelConfig) (wga_option.Option, error) {
 	if modelConfig == nil || modelConfig.ModelId == "" {
 		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelConfig is required")
 	}
@@ -762,8 +741,8 @@ func buildModelOption(ctx *gin.Context, modelConfig *assistant_service.WgaModelC
 	}), nil
 }
 
-// buildToolOptions 构建工具配置选项（复用逻辑）
-func buildToolOptions(ctx *gin.Context, userId, orgId string, toolList []*assistant_service.WgaConfigTool) ([]wga_option.Option, error) {
+// buildWgaToolOptions 构建工具配置选项（复用逻辑）
+func buildWgaToolOptions(ctx *gin.Context, userId, orgId string, toolList []*assistant_service.WgaConfigTool) ([]wga_option.Option, error) {
 	var opts []wga_option.Option
 	for _, tool := range toolList {
 		switch tool.ToolType {
@@ -795,7 +774,7 @@ func buildToolOptions(ctx *gin.Context, userId, orgId string, toolList []*assist
 			}
 
 			opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
-				Title:   toolDetail.ToolSquareInfo.Name,
+				Title:   toolDetail.Name,
 				APIAuth: apiAuth,
 			}))
 		}
@@ -810,13 +789,13 @@ func checkWgaToolConfig(ctx *gin.Context, userId, orgId string, toolList []*assi
 	}
 
 	// 获取 wga 允许的 tool 名称列表
-	agentCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
+	toolCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
 	if err != nil {
 		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("get agent tool categories failed: %v", err))
 	}
 
 	validToolTitles := make(map[string]bool)
-	for _, tc := range agentCategories {
+	for _, tc := range toolCategories {
 		for _, t := range tc.Tools {
 			validToolTitles[t.Title] = true
 		}
@@ -847,13 +826,13 @@ func checkWgaToolConfig(ctx *gin.Context, userId, orgId string, toolList []*assi
 	return nil
 }
 
-// checkWgaToolAndAssistantConfig 校验工具和智能体配置（用于更新配置）
-func checkWgaToolAndAssistantConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
+// checkWgaAssistantConfig 校验wga智能体配置（用于更新配置）
+func checkWgaAssistantConfig(ctx *gin.Context, userId, orgId string, assistantList []*assistant_service.WgaConfigAssistant) error {
 	// 验证 assistant 是否存在且是单智能体
-	if len(req.AssistantList) > 0 {
-		assistantIds := make([]string, 0, len(req.AssistantList))
-		for _, a := range req.AssistantList {
-			assistantIds = append(assistantIds, a.AssistantID)
+	if len(assistantList) > 0 {
+		assistantIds := make([]string, 0, len(assistantList))
+		for _, a := range assistantList {
+			assistantIds = append(assistantIds, a.AssistantId)
 		}
 		assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
 			AssistantIdList: assistantIds,
@@ -865,7 +844,7 @@ func checkWgaToolAndAssistantConfig(ctx *gin.Context, userId, orgId string, req 
 		if err != nil {
 			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "assistant not found")
 		}
-		if len(assistantResp.AssistantInfos) != len(req.AssistantList) {
+		if len(assistantResp.AssistantInfos) != len(assistantList) {
 			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "assistant not found")
 		}
 		// 验证所有 assistant 都是单智能体
@@ -875,19 +854,10 @@ func checkWgaToolAndAssistantConfig(ctx *gin.Context, userId, orgId string, req 
 			}
 		}
 	}
-
-	// 复用工具校验逻辑
-	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
-	for _, t := range req.ToolList {
-		toolList = append(toolList, &assistant_service.WgaConfigTool{
-			ToolId:   t.ToolID,
-			ToolType: t.ToolType,
-		})
-	}
-	return checkWgaToolConfig(ctx, userId, orgId, toolList)
+	return nil
 }
 
-func buildFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo, error) {
+func buildWgaFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo, error) {
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -907,7 +877,7 @@ func buildFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo,
 
 		if entry.IsDir() {
 			fileInfo.Type = "directory"
-			children, err := buildFileTree(filepath.Join(dirPath, entry.Name()), filePath)
+			children, err := buildWgaFileTree(filepath.Join(dirPath, entry.Name()), filePath)
 			if err == nil {
 				fileInfo.Children = children
 			}
@@ -930,11 +900,11 @@ func buildFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo,
 	return files, nil
 }
 
-func calculateTotalSize(files []response.GeneralAgentFileInfo) int64 {
+func calculateWgaFileTreeTotalSize(files []response.GeneralAgentFileInfo) int64 {
 	var total int64
 	for _, f := range files {
 		if f.Type == "directory" {
-			total += calculateTotalSize(f.Children)
+			total += calculateWgaFileTreeTotalSize(f.Children)
 		} else {
 			total += f.Size
 		}

@@ -119,7 +119,7 @@ func (p *StreamProcessor) ProcessBackup(ctx context.Context, in <-chan aguievent
 	return cleanedOut, historyOut
 }
 
-func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Event, input interface{}) (<-chan aguievents.Event, <-chan aguievents.Event) {
+func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Event, userInput interface{}) (<-chan aguievents.Event, <-chan aguievents.Event) {
 	cleanedOut := make(chan aguievents.Event, 1024)
 	historyOut := make(chan aguievents.Event, 1024)
 
@@ -144,7 +144,7 @@ func (p *StreamProcessor) Process(ctx context.Context, in <-chan aguievents.Even
 
 				if cleanedEvent.Type() == aguievents.EventTypeRunStarted {
 					if runStarted, ok := cleanedEvent.(*aguievents.RunStartedEvent); ok {
-						cleanedEvent = NewRunStartedEventWithInput(runStarted.ThreadID(), runStarted.RunID(), input)
+						cleanedEvent = NewRunStartedEventWithInput(runStarted.ThreadID(), runStarted.RunID(), userInput)
 					}
 				}
 

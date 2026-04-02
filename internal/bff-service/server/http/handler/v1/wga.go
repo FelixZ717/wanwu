@@ -165,7 +165,7 @@ func GetGeneralAgentConversationList(ctx *gin.Context) {
 //	@Description	获取指定会话的对话详情，包括对话标题、创建时间等信息
 //	@Security		JWT
 //	@Produce		json
-//	@Param			threadId	query		string	false	"会话ID"
+//	@Param			threadId	query		string	true	"会话ID"
 //	@Success		200			{object}	response.Response{data=response.ListResult{list=[]response.GeneralAgentConversationDetailInfo}}
 //	@Router			/general/agent/conversation/detail [get]
 func GetGeneralAgentConversationDetail(ctx *gin.Context) {
@@ -217,7 +217,7 @@ func UpdateGeneralAgentConversationConfig(ctx *gin.Context) {
 	gin_util.Response(ctx, nil, err)
 }
 
-// CheckGeneralAgentConfig
+// CheckGeneralAgentConversationConfig
 //
 //	@Tags			wga
 //	@Summary		通用智能体配置检查接口
@@ -228,12 +228,12 @@ func UpdateGeneralAgentConversationConfig(ctx *gin.Context) {
 //	@Param			data	body		request.GeneralAgentConfigCheckRequest	true	"通用智能体配置检查请求参数"
 //	@Success		200		{object}	response.Response{data=response.GeneralAgentConfigCheckResponse}
 //	@Router			/general/agent/conversation/config/check [post]
-func CheckGeneralAgentConfig(ctx *gin.Context) {
+func CheckGeneralAgentConversationConfig(ctx *gin.Context) {
 	var req request.GeneralAgentConfigCheckRequest
 	if !gin_util.Bind(ctx, &req) {
 		return
 	}
-	resp, err := service.CheckGeneralAgentConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
+	resp, err := service.CheckGeneralAgentConversationConfig(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, resp, err)
 }
 
@@ -376,7 +376,7 @@ func GeneralAgentCopilotRuntime(ctx *gin.Context) {
 		for _, run := range resp.List.([]response.GeneralAgentConversationDetailInfo) {
 			for _, event := range run.Events {
 				b, _ := json.Marshal(event)
-				ctx.Writer.Write([]byte(fmt.Sprintf("data: %v\n\n", string(b))))
+				_, _ = fmt.Fprintf(ctx.Writer, "data: %v\n\n", string(b))
 				ctx.Writer.Flush()
 				time.Sleep(time.Millisecond * 5)
 				// if _, err = builder.WriteString(fmt.Sprintf("data: %v\n\n", string(b))); err != nil {

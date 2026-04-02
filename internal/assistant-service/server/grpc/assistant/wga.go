@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
+	"github.com/UnicomAI/wanwu/api/proto/common"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	"github.com/UnicomAI/wanwu/internal/assistant-service/client/model"
 	"github.com/UnicomAI/wanwu/pkg/log"
@@ -107,7 +108,7 @@ func toProtoWgaConversationConfig(m *model.WgaConversationConfig) *assistant_ser
 	}
 
 	if m.ModelConfig != "" {
-		var modelConfig assistant_service.WgaModelConfig
+		var modelConfig common.AppModelConfig
 		if err := json.Unmarshal([]byte(m.ModelConfig), &modelConfig); err == nil {
 			config.ModelConfig = &modelConfig
 		}
@@ -127,10 +128,10 @@ func toProtoWgaConfig(m *model.WgaConfig) *assistant_service.WgaConfig {
 	if m.ToolList != "" {
 		var tools []assistant_service.WgaConfigTool
 		if err := json.Unmarshal([]byte(m.ToolList), &tools); err == nil {
-			for _, t := range tools {
+			for i := range tools {
 				config.ToolList = append(config.ToolList, &assistant_service.WgaConfigTool{
-					ToolId:   t.ToolId,
-					ToolType: t.ToolType,
+					ToolId:   tools[i].ToolId,
+					ToolType: tools[i].ToolType,
 				})
 			}
 		}
@@ -139,10 +140,10 @@ func toProtoWgaConfig(m *model.WgaConfig) *assistant_service.WgaConfig {
 	if m.AssistantList != "" {
 		var assistants []assistant_service.WgaConfigAssistant
 		if err := json.Unmarshal([]byte(m.AssistantList), &assistants); err == nil {
-			for _, a := range assistants {
+			for i := range assistants {
 				config.AssistantList = append(config.AssistantList, &assistant_service.WgaConfigAssistant{
-					AssistantId:   a.AssistantId,
-					AssistantType: a.AssistantType,
+					AssistantId:   assistants[i].AssistantId,
+					AssistantType: assistants[i].AssistantType,
 				})
 			}
 		}

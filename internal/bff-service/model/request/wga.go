@@ -67,13 +67,30 @@ type GeneralAgentConversationChatReq struct {
 	Messages []GeneralAgentConversationMessage `json:"messages" validate:"required"` // 消息
 }
 
+func (c *GeneralAgentConversationChatReq) Check() error { return nil }
+
 type GeneralAgentConversationMessage struct {
 	ID      string      `json:"id"`                          // 消息id
 	Role    string      `json:"role" validate:"required"`    // 角色 user
 	Content interface{} `json:"content" validate:"required"` // 内容 string 或者 [{"type":"text","text":"这张图片是什么？"},{"type":"binary","mimeType":"image/png","url":"https://..."}]
 }
 
-func (c *GeneralAgentConversationChatReq) Check() error { return nil }
+func (m *GeneralAgentConversationMessage) GetURLs() []string {
+	var urls []string
+	switch v := m.Content.(type) {
+	case []interface{}:
+		for _, item := range v {
+			if m, ok := item.(map[string]interface{}); ok {
+				if m["type"] == "binary" {
+					if urlStr, ok := m["url"].(string); ok {
+						urls = append(urls, urlStr)
+					}
+				}
+			}
+		}
+	}
+	return urls
+}
 
 type GeneralAgentWorkspaceDownloadReq struct {
 	ThreadID string `json:"threadId" form:"threadId" validate:"required"` // 对话ID

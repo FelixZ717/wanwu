@@ -24,7 +24,7 @@ func registerWGA(apiV1 *gin.RouterGroup) {
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/detail", http.MethodGet, v1.GetGeneralAgentConversationDetail, "通用智能体对话详情")
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/config", http.MethodGet, v1.GetGeneralAgentConversationConfig, "通用智能体对话配置")
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/config", http.MethodPut, v1.UpdateGeneralAgentConversationConfig, "修改通用智能体对话配置")
-	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/config/check", http.MethodPost, v1.CheckGeneralAgentConfig, "通用智能体配置检查")
+	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/config/check", http.MethodPost, v1.CheckGeneralAgentConversationConfig, "通用智能体配置检查")
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/workspace/download", http.MethodGet, v1.GeneralAgentWorkspaceDownload, "通用智能体workspace下载")
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/workspace/preview", http.MethodGet, v1.GeneralAgentWorkspacePreview, "通用智能体workspace预览")
 	mid.Sub("wga").Reg(apiV1, "/general/agent/conversation/workspace", http.MethodGet, v1.GeneralAgentWorkspaceInfo, "通用智能体workspace目录树")

@@ -11925,6 +11925,7 @@ paths:
       - description: 会话ID
         in: query
         name: threadId
+        required: true
         type: string
       produces:
       - application/json

@@ -6203,7 +6203,8 @@ const docTemplate = `{
                         "type": "string",
                         "description": "会话ID",
                         "name": "threadId",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {

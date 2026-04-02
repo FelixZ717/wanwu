@@ -8,7 +8,7 @@ configure:
   enable_thinking: true
   sandbox:
     type: reuse
-    host: localhost
+    host: wga-sandbox-wanwu
 
 prompt_relative_path: ./prompt.md
 
