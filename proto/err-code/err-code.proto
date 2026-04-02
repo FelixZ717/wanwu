@@ -178,6 +178,7 @@ enum Code {
   WgaConfigGetErr = 160017; // 获取智能体配置错误
   WgaConversationUpdateErr = 160018; // 更新智能体对话配置错误
   WgaConversationGetErr = 160019; // 获取智能体对话配置错误
+  WgaConfigCheckErr = 160020; // 通用智能体配置校验错误
 
   // --- workflow-service ---
   // [210000, 219999]

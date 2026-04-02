@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	net_url "net/url"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
@@ -41,9 +41,13 @@ func GetGeneralAgentAssistantSelect(ctx *gin.Context, userId, orgId string, name
 	}
 	var result []response.GetGeneralAgentAssistantSelectResp
 	for _, assistantInfo := range resp.AssistantInfos {
+		// 只展示单智能体
+		if assistantInfo.Category != constant.AgentCategorySingle {
+			continue
+		}
 		appBriefInfo := appBriefProto2Model(ctx, assistantInfo.Info, assistantInfo.Category)
 		if appBriefInfo.Avatar.Path != "" {
-			appBriefInfo.Avatar.Path = path.Join(config.Cfg().Server.ApiBaseUrl, appBriefInfo.Avatar.Path)
+			appBriefInfo.Avatar.Path, _ = net_url.JoinPath(config.Cfg().Server.ApiBaseUrl, appBriefInfo.Avatar.Path)
 		}
 		result = append(result, response.GetGeneralAgentAssistantSelectResp{
 			AppBriefInfo: appBriefInfo,
@@ -95,7 +99,7 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 				toolInfo.APIKey = item.ApiKey
 				toolInfo.Avatar = cacheToolAvatar(ctx, constant.ToolTypeBuiltIn, item.AvatarPath)
 				if toolInfo.Avatar.Path != "" {
-					toolInfo.Avatar.Path = path.Join(config.Cfg().Server.ApiBaseUrl, toolInfo.Avatar.Path)
+					toolInfo.Avatar.Path, _ = net_url.JoinPath(config.Cfg().Server.ApiBaseUrl, toolInfo.Avatar.Path)
 				}
 			}
 
@@ -110,6 +114,11 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId string) ([]respon
 }
 
 func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
+	// 验证 tool 和 assistant 配置
+	if err := checkWgaToolAndAssistantConfig(ctx, userId, orgId, req); err != nil {
+		return err
+	}
+
 	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
 	for _, t := range req.ToolList {
 		toolList = append(toolList, &assistant_service.WgaConfigTool{
@@ -149,13 +158,45 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (*response.Ge
 	}
 
 	result := &response.GetGeneralAgentConfigResp{}
+
+	// 过滤存在的 tool
+	validToolIds := make(map[string]bool)
 	for _, t := range resp.Config.ToolList {
+		// 验证 tool 是否存在
+		if t.ToolType == constant.ToolTypeBuiltIn {
+			_, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
+				ToolSquareId: t.ToolId,
+				Identity: &mcp_service.Identity{
+					UserId: userId,
+					OrgId:  orgId,
+				},
+			})
+			if err != nil {
+				// tool 不存在，跳过
+				continue
+			}
+		}
+		validToolIds[t.ToolId] = true
 		result.ToolList = append(result.ToolList, request.ToolSelected{
 			ToolID:   t.ToolId,
 			ToolType: t.ToolType,
 		})
 	}
+
+	// 过滤存在的 assistant
 	for _, a := range resp.Config.AssistantList {
+		// 验证 assistant 是否存在
+		assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
+			AssistantIdList: []string{a.AssistantId},
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+		if err != nil || len(assistantResp.AssistantInfos) == 0 {
+			// assistant 不存在，跳过
+			continue
+		}
 		result.AssistantList = append(result.AssistantList, request.AssistantSelected{
 			AssistantID:   a.AssistantId,
 			AssistantType: a.AssistantType,
@@ -174,7 +215,7 @@ func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType s
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not found: %s", toolId))
 	}
 
 	var actions []*protocol.Tool
@@ -186,7 +227,7 @@ func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType s
 
 	toolAvatar := cacheToolAvatar(ctx, constant.ToolTypeBuiltIn, resp.Info.AvatarPath)
 	if toolAvatar.Path != "" {
-		toolAvatar.Path = path.Join(config.Cfg().Server.ApiBaseUrl, toolAvatar.Path)
+		toolAvatar.Path, _ = net_url.JoinPath(config.Cfg().Server.ApiBaseUrl, toolAvatar.Path)
 	}
 
 	return &response.GeneralAgentToolInfoResp{
@@ -204,7 +245,7 @@ func GetGeneralAgentToolInfo(ctx *gin.Context, userId, orgId, toolId, toolType s
 }
 
 func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req request.CreateGeneralAgentConversationReq) (*response.CreateGeneralAgentConversationResp, error) {
-	if err := checkCreateConversationConfig(ctx, req); err != nil {
+	if err := checkModelConfig(ctx, req.ModelConfig); err != nil {
 		return nil, err
 	}
 
@@ -225,9 +266,8 @@ func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 	}
 
 	resp, err := assistant.WgaConversationCreate(ctx.Request.Context(), &assistant_service.WgaConversationCreateReq{
-		Prompt:           req.Title,
-		ModelConfig:      modelConfig,
-		ConversationType: constant.ConversationTypeWga,
+		Prompt:      req.Title,
+		ModelConfig: modelConfig,
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -241,9 +281,8 @@ func CreateGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 
 func GetGeneralAgentConversationList(ctx *gin.Context, userId, orgId string, req request.GetGeneralAgentConversationListReq) (*response.ListResult, error) {
 	resp, err := assistant.WgaConversationList(ctx.Request.Context(), &assistant_service.WgaConversationListReq{
-		ConversationType: constant.ConversationTypeWga,
-		PageSize:         int32(req.PageSize),
-		PageNo:           int32(req.PageNo),
+		PageSize: int32(req.PageSize),
+		PageNo:   int32(req.PageNo),
 		Identity: &assistant_service.Identity{
 			UserId: userId,
 			OrgId:  orgId,
@@ -370,21 +409,27 @@ func GetGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, r
 		ModelConfig: request.AppModelConfig{},
 	}
 
-	// 处理模型配置
+	// 处理模型配置 - 需要验证模型是否存在
 	if wgaConfig.ModelConfig != nil && wgaConfig.ModelConfig.ModelId != "" {
-		result.ModelConfig = request.AppModelConfig{
-			Provider:    wgaConfig.ModelConfig.Provider,
-			Model:       wgaConfig.ModelConfig.Model,
-			ModelId:     wgaConfig.ModelConfig.ModelId,
-			ModelType:   wgaConfig.ModelConfig.ModelType,
-			DisplayName: wgaConfig.ModelConfig.Model,
-		}
-		if wgaConfig.ModelConfig.Config != "" {
-			var modelConfig interface{}
-			if err := json.Unmarshal([]byte(wgaConfig.ModelConfig.Config), &modelConfig); err == nil {
-				result.ModelConfig.Config = modelConfig
+		// 验证模型是否存在
+		modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: wgaConfig.ModelConfig.ModelId})
+		if err == nil && modelInfo != nil {
+			// 模型存在，返回配置
+			result.ModelConfig = request.AppModelConfig{
+				Provider:    wgaConfig.ModelConfig.Provider,
+				Model:       wgaConfig.ModelConfig.Model,
+				ModelId:     wgaConfig.ModelConfig.ModelId,
+				ModelType:   wgaConfig.ModelConfig.ModelType,
+				DisplayName: wgaConfig.ModelConfig.Model,
+			}
+			if wgaConfig.ModelConfig.Config != "" {
+				var modelConfig interface{}
+				if err := json.Unmarshal([]byte(wgaConfig.ModelConfig.Config), &modelConfig); err == nil {
+					result.ModelConfig.Config = modelConfig
+				}
 			}
 		}
+		// 如果模型不存在，返回空的 ModelConfig
 	}
 
 	return result, nil
@@ -417,82 +462,23 @@ func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request
 	}
 	wgaConfig := configResp.Config
 
-	// 构建参数
-	// 模型信息
 	var opts []wga_option.Option
-	if wgaConversationConfig.ModelConfig != nil && wgaConversationConfig.ModelConfig.ModelId != "" {
-		modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: wgaConversationConfig.ModelConfig.ModelId})
+
+	// 构建模型配置选项
+	if wgaConversationConfig.GetModelConfig() != nil && wgaConversationConfig.ModelConfig.ModelId != "" {
+		modelOpt, err := buildModelOption(ctx, wgaConversationConfig.ModelConfig)
 		if err != nil {
 			return nil, err
 		}
-		endpoint := mp.ToModelEndpoint(wgaConversationConfig.ModelConfig.ModelId, wgaConversationConfig.ModelConfig.Model)
-		modelURL, _ := endpoint["model_url"].(string)
-		var APIKey string
-		modelConfig, err := mp.ToModelConfig(modelInfo.Provider, modelInfo.ModelType, modelInfo.ProviderConfig)
-		if err == nil {
-			cfg := make(map[string]any)
-			if b, err := json.Marshal(modelConfig); err == nil {
-				if err = json.Unmarshal(b, &cfg); err == nil {
-					if apiKey, ok := cfg["apiKey"].(string); ok {
-						APIKey = apiKey
-					}
-				}
-			}
-		}
-		var modelParams *mp_common.LLMParams
-		if wgaConversationConfig.ModelConfig.Config != "" {
-			llmParams, _, err := mp.ToModelParams(wgaConversationConfig.ModelConfig.Provider, wgaConversationConfig.ModelConfig.ModelType, wgaConversationConfig.ModelConfig.Config)
-			if err == nil && llmParams != nil {
-				modelParams = llmParams.(*mp_common.LLMParams)
-			}
-		}
-		opts = append(opts, wga_option.WithModelConfig(wga_option.ModelConfig{
-			Provider:     wgaConversationConfig.ModelConfig.Provider,
-			ProviderName: wgaConversationConfig.ModelConfig.Provider,
-			BaseURL:      modelURL,
-			APIKey:       APIKey,
-			Model:        wgaConversationConfig.ModelConfig.Model,
-			ModelName:    wgaConversationConfig.ModelConfig.Model,
-			Params:       modelParams,
-		}))
+		opts = append(opts, modelOpt)
 	}
 
-	// 工具信息
-	for _, tool := range wgaConfig.ToolList {
-		switch tool.ToolType {
-		// 仅处理了内置工具
-		case constant.ToolTypeBuiltIn:
-			toolResp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-				ToolSquareId: tool.ToolId,
-				Identity: &mcp_service.Identity{
-					UserId: userId,
-					OrgId:  orgId,
-				},
-			})
-			if err != nil {
-				return nil, err
-			}
-			var toolDetail = toToolSquareDetail(ctx, toolResp)
-
-			authType := toolDetail.ApiAuth.AuthType
-			if authType == "" {
-				authType = util.AuthTypeNone
-			}
-			apiAuth := &util.ApiAuthWebRequest{
-				AuthType:           authType,
-				ApiKeyHeaderPrefix: toolDetail.ApiAuth.ApiKeyHeaderPrefix,
-				ApiKeyHeader:       toolDetail.ApiAuth.ApiKeyHeader,
-				ApiKeyQueryParam:   toolDetail.ApiAuth.ApiKeyQueryParam,
-				ApiKeyValue:        toolDetail.ApiAuth.ApiKeyValue,
-			}
-
-			toolConfig := wga_option.ToolConfig{
-				Title:   toolDetail.ToolSquareInfo.Name,
-				APIAuth: apiAuth,
-			}
-			opts = append(opts, wga_option.WithToolConfig(toolConfig))
-		}
+	// 构建工具配置选项
+	toolOpts, err := buildToolOptions(ctx, userId, orgId, wgaConfig.ToolList)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, toolOpts...)
 
 	// 检查配置
 	checkResult, err := wga.CheckOptions(ctx.Request.Context(), config.WgaCfg().AgentID, opts...)
@@ -534,7 +520,7 @@ func CheckGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req request
 }
 
 func UpdateGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConversationConfigReq) error {
-	if err := checkUpdateConfig(ctx, userId, orgId, req); err != nil {
+	if err := checkModelConfig(ctx, req.ModelConfig); err != nil {
 		return err
 	}
 
@@ -692,112 +678,213 @@ func GeneralAgentWorkspaceInfo(ctx *gin.Context, userId, orgId string, req reque
 
 // --- internal ---
 
-func checkCreateConversationConfig(ctx *gin.Context, req request.CreateGeneralAgentConversationReq) error {
-	if req.ModelConfig != nil && req.ModelConfig.ModelId != "" {
-		_, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: req.ModelConfig.ModelId})
-		if err != nil {
-			return fmt.Errorf("model not found: %s", req.ModelConfig.ModelId)
-		}
+// checkModelConfig 校验请求中的模型配置（用于创建/更新对话配置）
+func checkModelConfig(ctx *gin.Context, req *request.AppModelConfig) error {
+	if req == nil {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelConfig is required")
+	}
+	if req.ModelId == "" {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelId is required")
+	}
+	if req.Model == "" {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "model is required")
+	}
+	// 校验模型是否存在
+	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: req.ModelId})
+	if err != nil {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model not found: %s", req.ModelId))
+	}
+	// 校验 model 名称是否匹配
+	if modelInfo.Model != req.Model {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model name mismatch: expected %s, got %s", modelInfo.Model, req.Model))
 	}
 	return nil
 }
 
-func checkUpdateConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConversationConfigReq) error {
-	if req.ModelConfig != nil && req.ModelConfig.ModelId != "" {
-		_, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: req.ModelConfig.ModelId})
-		if err != nil {
-			return fmt.Errorf("model not found: %s", req.ModelConfig.ModelId)
+// checkModelConfigFromProto 校验proto类型的模型配置（用于运行时检查）
+func checkModelConfigFromProto(ctx *gin.Context, modelConfig *assistant_service.WgaModelConfig) error {
+	if modelConfig == nil || modelConfig.ModelId == "" {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelConfig is required for conversation")
+	}
+	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: modelConfig.ModelId})
+	if err != nil {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model not found: %s", modelConfig.ModelId))
+	}
+	if modelInfo.Model != modelConfig.Model {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model name mismatch: expected %s, got %s", modelInfo.Model, modelConfig.Model))
+	}
+	return nil
+}
+
+// buildModelOption 构建模型配置选项
+func buildModelOption(ctx *gin.Context, modelConfig *assistant_service.WgaModelConfig) (wga_option.Option, error) {
+	if modelConfig == nil || modelConfig.ModelId == "" {
+		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "modelConfig is required")
+	}
+
+	modelInfo, err := model.GetModel(ctx.Request.Context(), &model_service.GetModelReq{ModelId: modelConfig.ModelId})
+	if err != nil {
+		return nil, grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("model not found: %s", modelConfig.ModelId))
+	}
+
+	endpoint := mp.ToModelEndpoint(modelConfig.ModelId, modelConfig.Model)
+	modelURL, _ := endpoint["model_url"].(string)
+
+	var apiKey string
+	cfg, err := mp.ToModelConfig(modelInfo.Provider, modelInfo.ModelType, modelInfo.ProviderConfig)
+	if err == nil {
+		var cfgMap map[string]any
+		if b, err := json.Marshal(cfg); err == nil {
+			if err = json.Unmarshal(b, &cfgMap); err == nil {
+				if k, ok := cfgMap["apiKey"].(string); ok {
+					apiKey = k
+				}
+			}
 		}
 	}
 
-	// if len(req.AssistantList) > 0 {
-	// 	assistantIds := make([]string, 0, len(req.AssistantList))
-	// 	for _, a := range req.AssistantList {
-	// 		assistantIds = append(assistantIds, a.AssistantID)
-	// 	}
-	// 	assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
-	// 		AssistantIdList: assistantIds,
-	// 		Identity: &assistant_service.Identity{
-	// 			UserId: userId,
-	// 			OrgId:  orgId,
-	// 		},
-	// 	})
-	// 	if err != nil {
-	// 		return fmt.Errorf("assistant check failed")
-	// 	}
-	// 	if len(assistantResp.AssistantInfos) != len(req.AssistantList) {
-	// 		return fmt.Errorf("assistant not found")
-	// 	}
-	// }
+	var modelParams *mp_common.LLMParams
+	if modelConfig.Config != "" {
+		llmParams, _, err := mp.ToModelParams(modelConfig.Provider, modelConfig.ModelType, modelConfig.Config)
+		if err == nil && llmParams != nil {
+			modelParams = llmParams.(*mp_common.LLMParams)
+		}
+	}
 
-	// if len(req.ToolList) > 0 {
-	// 	agentCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
-	// 	if err != nil {
-	// 		return fmt.Errorf("get agent tool categories failed: %v", err)
-	// 	}
+	return wga_option.WithModelConfig(wga_option.ModelConfig{
+		Provider:     modelConfig.Provider,
+		ProviderName: modelConfig.Provider,
+		BaseURL:      modelURL,
+		APIKey:       apiKey,
+		Model:        modelConfig.Model,
+		ModelName:    modelConfig.Model,
+		Params:       modelParams,
+	}), nil
+}
 
-	// 	validToolTitles := make(map[string]bool)
-	// 	for _, tc := range agentCategories {
-	// 		for _, t := range tc.Tools {
-	// 			validToolTitles[t.Title] = true
-	// 		}
-	// 	}
+// buildToolOptions 构建工具配置选项（复用逻辑）
+func buildToolOptions(ctx *gin.Context, userId, orgId string, toolList []*assistant_service.WgaConfigTool) ([]wga_option.Option, error) {
+	var opts []wga_option.Option
+	for _, tool := range toolList {
+		switch tool.ToolType {
+		case constant.ToolTypeBuiltIn:
+			toolResp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
+				ToolSquareId: tool.ToolId,
+				Identity: &mcp_service.Identity{
+					UserId: userId,
+					OrgId:  orgId,
+				},
+			})
+			if err != nil {
+				// 工具不存在时跳过，不阻断运行
+				log.Warnf("[wga] tool %s not found, skip: %v", tool.ToolId, err)
+				continue
+			}
+			toolDetail := toToolSquareDetail(ctx, toolResp)
 
-	// 	var opts []wga_option.Option
+			authType := toolDetail.ApiAuth.AuthType
+			if authType == "" {
+				authType = util.AuthTypeNone
+			}
+			apiAuth := &util.ApiAuthWebRequest{
+				AuthType:           authType,
+				ApiKeyHeaderPrefix: toolDetail.ApiAuth.ApiKeyHeaderPrefix,
+				ApiKeyHeader:       toolDetail.ApiAuth.ApiKeyHeader,
+				ApiKeyQueryParam:   toolDetail.ApiAuth.ApiKeyQueryParam,
+				ApiKeyValue:        toolDetail.ApiAuth.ApiKeyValue,
+			}
 
-	// 	for _, t := range req.ToolList {
-	// 		switch t.ToolType {
-	// 		case constant.ToolTypeBuiltIn:
-	// 			toolResp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
-	// 				ToolSquareId: t.ToolID,
-	// 				Identity: &mcp_service.Identity{
-	// 					UserId: userId,
-	// 					OrgId:  orgId,
-	// 				},
-	// 			})
-	// 			if err != nil {
-	// 				return fmt.Errorf("tool not found: %s", t.ToolID)
-	// 			}
+			opts = append(opts, wga_option.WithToolConfig(wga_option.ToolConfig{
+				Title:   toolDetail.ToolSquareInfo.Name,
+				APIAuth: apiAuth,
+			}))
+		}
+	}
+	return opts, nil
+}
 
-	// 			if !validToolTitles[toolResp.Info.Name] {
-	// 				return fmt.Errorf("tool %s is not in wga tool categories", toolResp.Info.Name)
-	// 			}
+// checkWgaToolConfig 校验工具配置是否存在且是 WGA 所需的（用于运行前检查）
+func checkWgaToolConfig(ctx *gin.Context, userId, orgId string, toolList []*assistant_service.WgaConfigTool) error {
+	if len(toolList) == 0 {
+		return nil
+	}
 
-	// 			toolDetail := toToolSquareDetail(ctx, toolResp)
+	// 获取 wga 允许的 tool 名称列表
+	agentCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
+	if err != nil {
+		return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("get agent tool categories failed: %v", err))
+	}
 
-	// 			authType := toolDetail.ApiAuth.AuthType
-	// 			if authType == "" {
-	// 				authType = util.AuthTypeNone
-	// 			}
-	// 			apiAuth := &util.ApiAuthWebRequest{
-	// 				AuthType:           authType,
-	// 				ApiKeyHeaderPrefix: toolDetail.ApiAuth.ApiKeyHeaderPrefix,
-	// 				ApiKeyHeader:       toolDetail.ApiAuth.ApiKeyHeader,
-	// 				ApiKeyQueryParam:   toolDetail.ApiAuth.ApiKeyQueryParam,
-	// 				ApiKeyValue:        toolDetail.ApiAuth.ApiKeyValue,
-	// 			}
+	validToolTitles := make(map[string]bool)
+	for _, tc := range agentCategories {
+		for _, t := range tc.Tools {
+			validToolTitles[t.Title] = true
+		}
+	}
 
-	// 			toolConfig := wga_option.ToolConfig{
-	// 				Title:   toolDetail.ToolSquareInfo.Name,
-	// 				APIAuth: apiAuth,
-	// 			}
-	// 			opts = append(opts, wga_option.WithToolConfig(toolConfig))
-	// 		}
-	// 	}
+	for _, t := range toolList {
+		switch t.ToolType {
+		case constant.ToolTypeBuiltIn:
+			// 验证 tool 是否存在
+			toolResp, err := mcp.GetSquareTool(ctx.Request.Context(), &mcp_service.GetSquareToolReq{
+				ToolSquareId: t.ToolId,
+				Identity: &mcp_service.Identity{
+					UserId: userId,
+					OrgId:  orgId,
+				},
+			})
+			if err != nil {
+				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not found: %s", t.ToolId))
+			}
 
-	// 	checkResult, err := wga.CheckOptions(ctx.Request.Context(), config.WgaCfg().AgentID, opts...)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	for _, tc := range checkResult.ToolCategories {
-	// 		if tc.Condition == "required" && !tc.Meet {
-	// 			return fmt.Errorf("required tool category not met: %s", tc.Category)
-	// 		}
-	// 	}
-	// }
+			// 验证 tool 是否在 wga 工具列表中
+			if !validToolTitles[toolResp.Info.Name] {
+				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("tool not allowed for wga: %s", toolResp.Info.Name))
+			}
+		}
+	}
 
 	return nil
+}
+
+// checkWgaToolAndAssistantConfig 校验工具和智能体配置（用于更新配置）
+func checkWgaToolAndAssistantConfig(ctx *gin.Context, userId, orgId string, req request.UpdateGeneralAgentConfigReq) error {
+	// 验证 assistant 是否存在且是单智能体
+	if len(req.AssistantList) > 0 {
+		assistantIds := make([]string, 0, len(req.AssistantList))
+		for _, a := range req.AssistantList {
+			assistantIds = append(assistantIds, a.AssistantID)
+		}
+		assistantResp, err := assistant.GetAssistantByIds(ctx.Request.Context(), &assistant_service.GetAssistantByIdsReq{
+			AssistantIdList: assistantIds,
+			Identity: &assistant_service.Identity{
+				UserId: userId,
+				OrgId:  orgId,
+			},
+		})
+		if err != nil {
+			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "assistant not found")
+		}
+		if len(assistantResp.AssistantInfos) != len(req.AssistantList) {
+			return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, "assistant not found")
+		}
+		// 验证所有 assistant 都是单智能体
+		for _, info := range assistantResp.AssistantInfos {
+			if info.Category != constant.AgentCategorySingle {
+				return grpc_util.ErrorStatus(errs.Code_WgaConfigCheckErr, fmt.Sprintf("assistant not single agent: %s", info.Info.Name))
+			}
+		}
+	}
+
+	// 复用工具校验逻辑
+	toolList := make([]*assistant_service.WgaConfigTool, 0, len(req.ToolList))
+	for _, t := range req.ToolList {
+		toolList = append(toolList, &assistant_service.WgaConfigTool{
+			ToolId:   t.ToolID,
+			ToolType: t.ToolType,
+		})
+	}
+	return checkWgaToolConfig(ctx, userId, orgId, toolList)
 }
 
 func buildFileTree(dirPath, parentPath string) ([]response.GeneralAgentFileInfo, error) {

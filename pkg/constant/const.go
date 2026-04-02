@@ -56,7 +56,6 @@ const (
 	ConversationTypePublished = "published" // 已发布
 	ConversationTypeDraft     = "draft"     // 草稿
 	ConversationTypeOpenAPI   = "openapi"   // openapi
-	ConversationTypeWga       = "wga"       // 通用智能体
 )
 
 // skill type

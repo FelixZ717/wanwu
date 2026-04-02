@@ -23,13 +23,6 @@ func (c *Client) GetWgaConversationConfig(ctx context.Context, threadId string, 
 }
 
 func (c *Client) UpdateWgaConversationConfig(ctx context.Context, config *model.WgaConversationConfig) *err_code.Status {
-	if err := sqlopt.WithThreadID(config.ThreadID).Apply(c.db.WithContext(ctx)).First(&model.WgaConversation{}).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return toErrStatus("wga_config_update", "conversation not found")
-		}
-		return toErrStatus("wga_config_check_conversation", err.Error())
-	}
-
 	var existing model.WgaConversationConfig
 	err := sqlopt.SQLOptions(
 		sqlopt.WithThreadID(config.ThreadID),
@@ -38,11 +31,18 @@ func (c *Client) UpdateWgaConversationConfig(ctx context.Context, config *model.
 	).Apply(c.db.WithContext(ctx)).First(&existing).Error
 
 	if err == nil {
-		result := c.db.WithContext(ctx).Model(&existing).Updates(map[string]interface{}{
-			"model_config": config.ModelConfig,
-		})
-		if result.Error != nil {
-			return toErrStatus("wga_config_update", result.Error.Error())
+		updates := map[string]interface{}{}
+		if config.ModelConfig != "" {
+			updates["model_config"] = config.ModelConfig
+		}
+		if config.Title != "" {
+			updates["title"] = config.Title
+		}
+		if len(updates) > 0 {
+			result := c.db.WithContext(ctx).Model(&existing).Updates(updates)
+			if result.Error != nil {
+				return toErrStatus("wga_config_update", result.Error.Error())
+			}
 		}
 		return nil
 	}
@@ -55,6 +55,46 @@ func (c *Client) UpdateWgaConversationConfig(ctx context.Context, config *model.
 		return toErrStatus("wga_config_create", err.Error())
 	}
 	return nil
+}
+
+func (c *Client) CreateWgaConversationConfig(ctx context.Context, config *model.WgaConversationConfig) *err_code.Status {
+	if err := c.db.WithContext(ctx).Create(config).Error; err != nil {
+		return toErrStatus("wga_conversation_create", err.Error())
+	}
+	return nil
+}
+
+func (c *Client) DeleteWgaConversationConfig(ctx context.Context, threadId string) *err_code.Status {
+	if err := sqlopt.WithThreadID(threadId).Apply(c.db.WithContext(ctx)).Delete(&model.WgaConversationConfig{}).Error; err != nil {
+		return toErrStatus("wga_conversation_delete", err.Error())
+	}
+	return nil
+}
+
+func (c *Client) GetWgaConversationConfigList(ctx context.Context, userID, orgID string, offset, limit int32) ([]*model.WgaConversationConfig, int64, *err_code.Status) {
+	var configs []*model.WgaConversationConfig
+	var count int64
+
+	if err := sqlopt.SQLOptions(
+		sqlopt.WithUserID(userID),
+		sqlopt.WithOrgID(orgID),
+	).Apply(c.db.WithContext(ctx).Model(&model.WgaConversationConfig{})).Offset(int(offset)).Limit(int(limit)).Order("created_at DESC").Find(&configs).Error; err != nil {
+		return configs, count, toErrStatus("wga_conversation_list", err.Error())
+	}
+
+	return configs, int64(len(configs)), nil
+}
+
+func (c *Client) WgaConversationConfigExists(ctx context.Context, threadId, userID, orgID string) (bool, *err_code.Status) {
+	var count int64
+	if err := sqlopt.SQLOptions(
+		sqlopt.WithUserID(userID),
+		sqlopt.WithOrgID(orgID),
+		sqlopt.WithThreadID(threadId),
+	).Apply(c.db.WithContext(ctx).Model(&model.WgaConversationConfig{})).Count(&count).Error; err != nil {
+		return false, toErrStatus("wga_conversation_exists", err.Error())
+	}
+	return count > 0, nil
 }
 
 func (c *Client) GetWgaConfig(ctx context.Context, userId, orgId string) (*model.WgaConfig, *err_code.Status) {

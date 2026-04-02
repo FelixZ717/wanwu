@@ -19455,6 +19455,7 @@ const docTemplate = `{
         "request.CreateGeneralAgentConversationReq": {
             "type": "object",
             "required": [
+                "modelConfig",
                 "title"
             ],
             "properties": {

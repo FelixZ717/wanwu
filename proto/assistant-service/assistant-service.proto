@@ -868,9 +868,8 @@ message SkillConversationItem {
 // --- wga conversation messages ---
 message WgaConversationCreateReq {
   string prompt = 1;
-  string conversationType = 2;
-  WgaModelConfig modelConfig = 3;
-  Identity identity = 4;
+  WgaModelConfig modelConfig = 2;
+  Identity identity = 3;
 }
 
 message WgaConversationCreateResp {
@@ -885,8 +884,7 @@ message WgaConversationDeleteReq {
 message WgaConversationListReq {
   int32 pageSize = 1;
   int32 pageNo = 2;
-  string conversationType = 3;
-  Identity identity = 4;
+  Identity identity = 3;
 }
 
 message WgaConversationListResp {
@@ -932,11 +930,12 @@ message WgaModelConfig {
 
 message WgaConversationConfig {
   string threadId = 1;
-  WgaModelConfig modelConfig = 2;
-  string userId = 5;
-  string orgId = 6;
-  int64 createdAt = 7;
-  int64 updatedAt = 8;
+  string title = 2;
+  WgaModelConfig modelConfig = 3;
+  string userId = 4;
+  string orgId = 5;
+  int64 createdAt = 6;
+  int64 updatedAt = 7;
 }
 
 message WgaConfig{
