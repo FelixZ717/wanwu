@@ -26,7 +26,10 @@ import (
 //	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.ExplorationAppInfo}}
 //	@Router			/general/agent/assistant/select [get]
 func GetGeneralAgentAssistantSelect(ctx *gin.Context) {
-	resp, err := service.GetGeneralAgentAssistantSelect(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
+	req := request.GetExplorationAppListRequest{
+		Name: ctx.Query("name"),
+	}
+	resp, err := service.GetAssistantSelect(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, resp, err)
 }
 
@@ -59,6 +62,41 @@ func GetGeneralAgentToolSelect(ctx *gin.Context) {
 //	@Router			/general/agent/tool/info [get]
 func GetGeneralAgentToolInfo(ctx *gin.Context) {
 	resp, err := service.GetGeneralAgentToolInfo(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("toolId"), ctx.Query("toolType"))
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetGeneralAgentMCPSelect
+//
+//	@Tags			wga
+//	@Summary		通用智能体MCP下拉接口列表
+//	@Description	获取通用智能体MCP下拉接口列表，用于用户选择MCP进行对话
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			name	query		string	false	"MCP名称"
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.MCPSelect}}
+//	@Router			/general/agent/mcp/select [get]
+func GetGeneralAgentMCPSelect(ctx *gin.Context) {
+	resp, err := service.GetMCPSelect(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("name"))
+	gin_util.Response(ctx, resp, err)
+}
+
+// GetGeneralAgentWorkflowSelect
+//
+//	@Tags			wga
+//	@Summary		通用智能体工作流列表
+//	@Description	获取通用智能体工作流列表
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			name	query		string	false	"workflow名称"
+//	@Success		200		{object}	response.Response{data=response.ListResult{list=[]response.ExplorationAppInfo}}
+//	@Router			/general/agent/workflow/select [get]
+func GetGeneralAgentWorkflowSelect(ctx *gin.Context) {
+	req := request.GetExplorationAppListRequest{
+		Name: ctx.Query("name"),
+	}
+	resp, err := service.GetWorkflowSelect(ctx, getUserID(ctx), getOrgID(ctx), req)
 	gin_util.Response(ctx, resp, err)
 }
 

@@ -8,6 +8,8 @@ import (
 type GetGeneralAgentConfigResp struct {
 	ToolList      []request.ToolSelected      `json:"toolList"`      // 工具列表
 	AssistantList []request.AssistantSelected `json:"assistantList"` // 智能体列表
+	MCPList       []request.MCPSelected       `json:"mcpList"`       // MCP列表
+	WorkflowList  []request.WorkflowSelected  `json:"workflowList"`  // 工作流列表
 }
 
 type GetGeneralAgentConversationConfigResp struct {
