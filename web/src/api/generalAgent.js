@@ -1,36 +1,9 @@
 import service from '@/utils/request';
 import { SERVICE_API } from '@/utils/requestConstants';
-import { store } from '@/store/index';
-import { USER_API } from '@/utils/requestConstants';
+import { store } from '@/store';
 
 // 基础路径
 const BASE_URL = `${SERVICE_API}/general/agent`;
-
-// 获取 token
-const getToken = () => {
-  return store.getters['user/token'] || '';
-};
-
-// 获取用户信息
-const getUserInfo = () => {
-  const user = store.getters['user/userInfo'] || {};
-  return {
-    userId: user.uid || '',
-    orgId: user.orgId || '',
-  };
-};
-
-// ==================== 模型选择 ====================
-
-/**
- * 获取LLM模型列表
- */
-export const getLlmModelSelect = () => {
-  return service({
-    url: `${SERVICE_API}/model/select/llm`,
-    method: 'get',
-  });
-};
 
 // ==================== 智能体选择 ====================
 
@@ -213,8 +186,8 @@ export const chatGeneralAgentConversation = async ({
   signal,
   timeout = 5 * 60 * 1000,
 }) => {
-  const token = getToken();
-  const { userId, orgId } = getUserInfo();
+  const token = store.getters['user/token'] || '';
+  const user = store.getters['user/userInfo'] || {};
   const url = `${window.location.origin}${BASE_URL}/conversation/chat`;
 
   // 创建超时控制器
@@ -236,9 +209,9 @@ export const chatGeneralAgentConversation = async ({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: token ? `Bearer ${token}` : '',
-        'x-user-id': userId,
-        'x-org-id': orgId,
+        Authorization: `Bearer ${token}`,
+        'x-user-id': user.uid || '',
+        'x-org-id': user.orgId || '',
       },
       body: JSON.stringify({ threadId, messages }),
       signal: combinedSignal,
@@ -363,22 +336,6 @@ export const previewGeneralAgentWorkspace = params => {
   });
 };
 
-// ==================== CopilotKit ====================
-
-/**
- * CopilotKit 协议端点
- * @param {string} method - 方法名 (info, agent/connect, agent/run, agent/stop)
- * @param {object} params - 参数
- * @param {object} body - 请求体
- */
-export const generalAgentCopilotRuntime = data => {
-  return service({
-    url: `${BASE_URL}/copilotkit`,
-    method: 'post',
-    data,
-  });
-};
-
 /**
  * 上传文件到通用智能体（直接上传）
  * @param {File} file - 文件对象
@@ -404,43 +361,4 @@ export const uploadGeneralAgentFile = (file, onProgress) => {
       }
     },
   });
-};
-
-/**
- * SSE 流式对话
- * @param {string} threadId - 会话ID
- * @param {string} content - 消息内容
- * @param {Array} attachments - 附件列表
- * @param {AbortSignal} signal - AbortController signal（可选）
- * @returns {Promise<Response>} fetch Response 对象
- */
-export const chatGeneralAgentStream = async (
-  threadId,
-  content,
-  attachments = [],
-  signal = null,
-) => {
-  const token = getToken();
-  const { userId, orgId } = getUserInfo();
-
-  const response = await fetch(
-    `${process.env.VUE_APP_BASE_URL || ''}${USER_API}/assistant/stream`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: token ? `Bearer ${token}` : '',
-        'x-user-id': userId,
-        'x-org-id': orgId,
-      },
-      body: JSON.stringify({
-        threadId,
-        content,
-        attachments,
-      }),
-      signal,
-    },
-  );
-
-  return response;
 };

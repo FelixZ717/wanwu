@@ -63,8 +63,8 @@ export default {
   },
   menu: {
     generalAgent: 'General Agent',
-    aiAssistant: 'AI Assistant',
-    wanwuAgent: 'Wanwu Agent',
+    wga: 'WanwuBot',
+    aiAssistant: 'OpenClaw',
     modelService: 'Model Service',
     resource: '资源库',
     square: '探索广场',
