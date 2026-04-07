@@ -279,6 +279,19 @@ func DeleteGeneralAgentConversation(ctx *gin.Context, userId, orgId string, req 
 		return err
 	}
 
+	// 同步删除 workspace
+	cfg := config.WgaCfg()
+	store, err := wga_persistent.NewStore(wga_persistent.Mode(cfg.Persistent.Mode), cfg.Persistent.BaseDir, req.ThreadID)
+	if err != nil {
+		log.Errorf("[wga] thread %v delete persistent store err: %v", req.ThreadID, err)
+	} else {
+		if threadDir := store.GetThreadDir().Dir; threadDir != "" {
+			if err := util.DeleteDir(threadDir); err != nil {
+				log.Errorf("[wga] thread %v delete persistent dir err: %v", req.ThreadID, err)
+			}
+		}
+	}
+
 	// 同步删除 ES 中的聊天历史
 	_, err = assistant.DeleteFromES(ctx.Request.Context(), &assistant_service.DeleteFromESReq{
 		IndexName: wgaConversationHistoryEventESIndexName,
