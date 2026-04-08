@@ -157,8 +157,8 @@
                   <el-image
                     v-if="file.type && file.type.startsWith('image/')"
                     class="echo-img"
-                    :src="file.displayUrl || file.url"
-                    :preview-src-list="[file.displayUrl || file.url]"
+                    :src="file.displayUrl"
+                    :preview-src-list="[file.displayUrl]"
                   ></el-image>
                   <!-- 文档类型 -->
                   <div v-else class="echo-doc-box">
@@ -211,18 +211,9 @@
                   @change="handleModelChange"
                   class="model-select-inline"
                 />
-                <div
-                  class="config-btn"
-                  :class="{ 'has-selection': selectedTools.length > 0 }"
-                  @click="showConfigDrawer = true"
-                >
+                <div class="config-btn" @click="showConfigDialog = true">
                   <i class="el-icon-setting"></i>
                   <span>配置</span>
-                  <el-badge
-                    v-if="selectedTools.length > 0"
-                    :value="selectedTools.length"
-                    type="primary"
-                  />
                 </div>
               </div>
               <div class="toolbar-right">
@@ -230,7 +221,6 @@
                   :fileTypeArr="['doc/*', 'image/*']"
                   type="agentChat"
                   @setFileId="handleSetFileId"
-                  @setFile="handleSetFile"
                 >
                   <template #default="{ openDialog }">
                     <el-tooltip content="上传文件" placement="top">
@@ -314,15 +304,8 @@
         @close="closePreview"
       />
 
-      <!-- 配置抽屉 -->
-      <config-drawer
-        :visible.sync="showConfigDrawer"
-        :tool-list="toolList"
-        :selected-tools="selectedTools"
-        :loading="loadingTools"
-        @toggle-tool="toggleTool"
-        @close="showConfigDrawer = false"
-      />
+      <!-- 配置弹窗 -->
+      <configDialog :visible.sync="showConfigDialog" />
     </div>
   </div>
 </template>
@@ -331,7 +314,7 @@
 import MessageItem from './components/MessageItem.vue';
 import WorkspacePanel from './components/WorkspacePanel.vue';
 import FilePreviewDrawer from './components/FilePreviewDrawer.vue';
-import ConfigDrawer from './components/ConfigDrawer.vue';
+import ConfigDialog from './components/ConfigDialog.vue';
 import ModelSelect from '@/components/modelSelect.vue';
 import StreamUploadField from '@/components/stream/streamUploadField.vue';
 import {
@@ -339,12 +322,11 @@ import {
   createGeneralAgentConversation,
   deleteGeneralAgentConversation,
   getGeneralAgentConversationDetail,
-  getGeneralAgentConfig,
-  updateGeneralAgentConfig,
+  getGeneralAgentConversationConfig,
+  updateGeneralAgentConversationConfig,
   chatGeneralAgentConversation,
   getGeneralAgentToolSelect,
   getGeneralAgentWorkspace,
-  uploadGeneralAgentFile,
   previewGeneralAgentWorkspace,
   downloadGeneralAgentWorkspace,
 } from '@/api/generalAgent';
@@ -366,7 +348,7 @@ export default {
     MessageItem,
     WorkspacePanel,
     FilePreviewDrawer,
-    ConfigDrawer,
+    ConfigDialog: ConfigDialog,
     ModelSelect,
     StreamUploadField,
   },
@@ -377,7 +359,6 @@ export default {
       currentThreadId: '',
       pageNo: 1,
       pageSize: 50,
-      total: 0,
       isNewConversation: false,
       isLoadingHistory: false,
 
@@ -389,13 +370,9 @@ export default {
       streamingMap: {},
 
       selectedModel: '',
-      selectedTools: [],
-      selectedAssistants: [],
       modelList: [],
       modelLoading: false,
-      toolList: [],
-      loadingTools: false,
-      showConfigDrawer: false,
+      showConfigDialog: false,
 
       currentRunId: '',
       currentStage: '',
@@ -431,9 +408,7 @@ export default {
     ...mapGetters('user', ['commonInfo']),
 
     assistantAvatar() {
-      const tab = this.commonInfo?.data?.tab || {};
-      const path = tab.logo?.path;
-      return path ? avatarSrc(path) : null;
+      return avatarSrc(this.commonInfo?.data?.tab?.logo?.path);
     },
 
     // 当前会话的消息列表
@@ -542,7 +517,6 @@ export default {
     this.initNewConversation();
     this.fetchModelList();
     this.fetchConversationList();
-    this.fetchToolList();
     this.initUserInfo();
     this.setupResizeObserver();
   },
@@ -623,16 +597,17 @@ export default {
         const res = await selectModelList();
         if (res.code === 0 && res.data?.list) {
           this.modelList = res.data.list.map(model => ({
-            modelId: model.modelId || model.model,
-            displayName: model.displayName || model.modelName || model.model,
-            modelName: model.displayName || model.modelName || model.model,
+            modelId: model.modelId,
+            displayName: model.displayName,
             model: model.model,
             provider: model.provider,
             modelType: model.modelType,
             config: model.config,
-            avatar: model.avatar || { path: '' },
+            avatar: model.avatar,
             tags: model.tags || [],
           }));
+          if (!this.selectedModel)
+            this.selectedModel = this.modelList[0].modelId;
         }
       } catch (error) {
         console.error('获取模型列表失败:', error);
@@ -649,24 +624,9 @@ export default {
         });
         if (res.code === 0) {
           this.conversationList = res.data?.list || [];
-          this.total = res.data?.total || 0;
         }
       } catch (error) {
         console.error('获取对话列表失败:', error);
-      }
-    },
-
-    async fetchToolList() {
-      this.loadingTools = true;
-      try {
-        const res = await getGeneralAgentToolSelect();
-        if (res.code === 0 && res.data) {
-          this.toolList = res.data || [];
-        }
-      } catch (error) {
-        console.error('获取工具列表失败:', error);
-      } finally {
-        this.loadingTools = false;
       }
     },
 
@@ -674,16 +634,17 @@ export default {
       this.currentThreadId = '';
       this.isNewConversation = true;
       this.$set(this.messagesMap, '', []);
-      this.selectedTools = [];
       // 重置滚动状态
       this.userHasScrolled = false;
       this.showScrollToBottom = false;
       // 关闭工作区面板
       this.hidePanel();
-      if (this.modelList && this.modelList.length > 0) {
-        const defaultModel = this.modelList[0];
-        this.selectedModel = defaultModel?.modelId || '';
-      }
+      this.$nextTick(() => {
+        if (this.modelList && this.modelList.length > 0) {
+          const defaultModel = this.modelList[0];
+          this.selectedModel = defaultModel?.modelId || '';
+        }
+      });
     },
 
     async createConversationWithTitle(title) {
@@ -699,12 +660,12 @@ export default {
           : this.modelList[0];
 
         const modelConfig = {
-          modelId: selectedModelConfig?.modelId || '',
-          model: selectedModelConfig?.model || '',
-          provider: selectedModelConfig?.provider || '',
-          displayName: selectedModelConfig?.modelName || '',
-          modelType: selectedModelConfig?.modelType || 'llm',
-          config: selectedModelConfig?.config || {},
+          modelId: selectedModelConfig?.modelId,
+          model: selectedModelConfig?.model,
+          provider: selectedModelConfig?.provider,
+          displayName: selectedModelConfig?.displayName,
+          modelType: selectedModelConfig?.modelType,
+          config: selectedModelConfig?.config,
         };
 
         const res = await createGeneralAgentConversation({
@@ -723,7 +684,6 @@ export default {
             this.$delete(this.messagesMap, '');
 
             this.selectedModel = modelConfig.modelId;
-            this.selectedTools = [];
             this.conversationList.unshift({
               threadId,
               title: title || '新对话',
@@ -741,58 +701,6 @@ export default {
         console.error('创建对话失败:', error);
         this.$message.error('创建对话失败，请检查网络连接');
         return null;
-      }
-    },
-
-    async createConversation() {
-      try {
-        // 检查模型列表是否已加载
-        if (!this.modelList || this.modelList.length === 0) {
-          this.$message.warning('模型列表加载中，请稍后重试');
-          return false;
-        }
-
-        // 获取默认模型配置
-        const defaultModel = this.modelList[0];
-        const modelConfig = {
-          modelId: defaultModel?.modelId || '',
-          model: defaultModel?.model || '',
-          provider: defaultModel?.provider || '',
-          displayName: defaultModel?.modelName || '',
-          modelType: defaultModel?.modelType || 'llm',
-          config: defaultModel?.config || {},
-        };
-
-        const res = await createGeneralAgentConversation({
-          title: '新对话',
-          modelConfig,
-        });
-        if (res.code === 0) {
-          const threadId = res.data?.threadId;
-          if (threadId) {
-            this.currentThreadId = threadId;
-            // 初始化新会话的消息列表
-            this.$set(this.messagesMap, threadId, []);
-            this.selectedModel = modelConfig.modelId;
-            this.selectedTools = [];
-            this.conversationList.unshift({
-              threadId,
-              title: '新对话',
-              createdAt: new Date().toISOString(),
-            });
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return true;
-          } else {
-            this.$message.error('创建对话失败：未返回对话ID');
-          }
-        } else {
-          this.$message.error(res.msg || '创建对话失败');
-        }
-        return false;
-      } catch (error) {
-        console.error('创建对话失败:', error);
-        this.$message.error('创建对话失败，请检查网络连接');
-        return false;
       }
     },
 
@@ -919,8 +827,8 @@ export default {
                 currentActivity = {
                   type: 'activity',
                   activityType: event.activityType,
-                  activityId: event.activityId || '',
-                  agentName: activityContent.agentName || '',
+                  activityId: event.activityId,
+                  agentName: activityContent.agentName,
                   fragments: [],
                 };
                 activityStack.push(currentActivity);
@@ -969,7 +877,7 @@ export default {
             addFragment({
               type: 'reasoning',
               content: '',
-              messageId: event.messageId || '',
+              messageId: event.messageId,
               startTime: eventTimestamp,
             });
             break;
@@ -981,12 +889,12 @@ export default {
               const lastFragment =
                 activity.fragments[activity.fragments.length - 1];
               if (lastFragment && lastFragment.type === 'reasoning') {
-                lastFragment.content += event.delta || '';
+                lastFragment.content += event.delta;
               }
             } else {
               const lastMsg = messages[messages.length - 1];
               if (lastMsg && lastMsg.type === 'reasoning') {
-                lastMsg.content += event.delta || '';
+                lastMsg.content += event.delta;
               }
             }
             break;
@@ -1025,7 +933,7 @@ export default {
             addFragment({
               type: 'text',
               content: '',
-              messageId: event.messageId || '',
+              messageId: event.messageId,
             });
             break;
           }
@@ -1036,12 +944,12 @@ export default {
               const lastFragment =
                 activity.fragments[activity.fragments.length - 1];
               if (lastFragment && lastFragment.type === 'text') {
-                lastFragment.content += event.delta || '';
+                lastFragment.content += event.delta;
               }
             } else {
               const lastMsg = messages[messages.length - 1];
               if (lastMsg && lastMsg.type === 'text') {
-                lastMsg.content += event.delta || '';
+                lastMsg.content += event.delta;
               }
             }
             break;
@@ -1064,7 +972,7 @@ export default {
             addFragment({
               type: 'tool_call',
               toolCall: toolCallData,
-              messageId: event.messageId || '',
+              messageId: event.messageId,
             });
             break;
           }
@@ -1072,7 +980,7 @@ export default {
           case 'TOOL_CALL_ARGS': {
             if (toolCallMap.has(event.toolCallId)) {
               const toolCall = toolCallMap.get(event.toolCallId);
-              toolCall.arguments += event.delta || '';
+              toolCall.arguments += event.delta;
             }
             break;
           }
@@ -1086,7 +994,7 @@ export default {
             let executionTime = '';
             if (toolCallMap.has(event.toolCallId)) {
               const toolCall = toolCallMap.get(event.toolCallId);
-              toolCall.result = event.content || '';
+              toolCall.result = event.content;
               toolCall.status = 'completed';
               if (toolCall.startTime && eventTimestamp) {
                 executionTime = formatDuration(
@@ -1103,7 +1011,7 @@ export default {
                   f.type === 'tool_call' && f.toolCall?.id === event.toolCallId,
               );
               if (fragment && fragment.toolCall) {
-                fragment.toolCall.result = event.content || '';
+                fragment.toolCall.result = event.content;
                 fragment.toolCall.status = 'completed';
                 fragment.toolCall.executionTime = executionTime;
               }
@@ -1113,7 +1021,7 @@ export default {
                   m.type === 'tool_call' && m.toolCall?.id === event.toolCallId,
               );
               if (toolCallMsg && toolCallMsg.toolCall) {
-                toolCallMsg.toolCall.result = event.content || '';
+                toolCallMsg.toolCall.result = event.content;
                 toolCallMsg.toolCall.status = 'completed';
                 toolCallMsg.toolCall.executionTime = executionTime;
               }
@@ -1176,7 +1084,7 @@ export default {
             currentAssistant.fragments.push({
               type: 'reasoning',
               content: msg.content,
-              duration: msg.duration || '',
+              duration: msg.duration,
             });
             currentAssistant.reasoning = msg.content;
           } else if (msg.type === 'tool_call' && msg.toolCall) {
@@ -1234,12 +1142,12 @@ export default {
           id: msg.id || this.generateId(),
           role: msg.role,
           content: this.formatContent(msg.content),
-          toolCalls: msg.toolCalls || null,
-          toolResults: msg.toolResults || null,
-          toolCallId: msg.toolCallId || null,
-          reasoning: msg.reasoning || '',
-          reasoningDuration: msg.reasoningDuration || '',
-          toolDuration: msg.toolDuration || '',
+          toolCalls: msg.toolCalls,
+          toolResults: msg.toolResults,
+          toolCallId: msg.toolCallId,
+          reasoning: msg.reasoning,
+          reasoningDuration: msg.reasoningDuration,
+          toolDuration: msg.toolDuration,
         };
       }
 
@@ -1294,40 +1202,26 @@ export default {
       return {
         id: msg.id || this.generateId(),
         role: msg.role || 'unknown',
-        content: this.formatContent(msg.content || msg.text || ''),
-        toolCalls: msg.toolCalls || null,
-        toolResults: msg.toolResults || null,
-        toolCallId: msg.toolCallId || null,
-        reasoning: msg.reasoning || '',
-        reasoningDuration: msg.reasoningDuration || '',
-        toolDuration: msg.toolDuration || '',
+        content: this.formatContent(msg.content || msg.text),
+        toolCalls: msg.toolCalls,
+        toolResults: msg.toolResults,
+        toolCallId: msg.toolCallId,
+        reasoning: msg.reasoning,
+        reasoningDuration: msg.reasoningDuration,
+        toolDuration: msg.toolDuration,
       };
     },
 
     async loadConfig() {
       if (!this.currentThreadId) return;
       try {
-        const res = await getGeneralAgentConfig({
+        const res = await getGeneralAgentConversationConfig({
           threadId: this.currentThreadId,
         });
         if (res.code === 0 && res.data) {
           if (res.data.modelConfig) {
             const modelConfig = res.data.modelConfig;
-            this.selectedModel = modelConfig.modelId || modelConfig.model || '';
-          }
-          if (res.data.toolList && Array.isArray(res.data.toolList)) {
-            this.selectedTools = res.data.toolList.map(tool => ({
-              toolId: tool.toolId,
-              toolName: tool.toolName,
-              toolType: tool.toolType,
-              enable: tool.enable,
-            }));
-          }
-          if (res.data.assistantList && Array.isArray(res.data.assistantList)) {
-            this.selectedAssistants = res.data.assistantList.map(assistant => ({
-              assistantId: assistant.agentId || assistant.assistantId,
-              name: assistant.name,
-            }));
+            this.selectedModel = modelConfig.modelId || modelConfig.model;
           }
         }
       } catch (error) {
@@ -1349,20 +1243,16 @@ export default {
         const selectedModelConfig = this.modelList.find(
           m => m.modelId === this.selectedModel,
         );
-        const res = await updateGeneralAgentConfig({
+        const res = await updateGeneralAgentConversationConfig({
           threadId: this.currentThreadId,
           modelConfig: {
             modelId: this.selectedModel,
-            model: selectedModelConfig?.model || '',
-            provider: selectedModelConfig?.provider || '',
-            displayName: selectedModelConfig?.modelName || '',
+            model: selectedModelConfig?.model,
+            provider: selectedModelConfig?.provider,
+            displayName: selectedModelConfig?.displayName,
             modelType: selectedModelConfig?.modelType || 'llm',
             config: selectedModelConfig?.config || {},
           },
-          toolList: this.selectedTools.map(t => ({
-            toolId: t.toolId,
-            toolType: t.toolType,
-          })),
         });
         if (res.code === 0) {
           if (!silent) {
@@ -1426,11 +1316,6 @@ export default {
       }
     },
 
-    handleSetFile(fileList) {
-      // 处理文件列表（如果需要）
-      console.log('Selected files:', fileList);
-    },
-
     getFileTypeFromName(fileName) {
       const ext = fileName.split('.').pop().toLowerCase();
       const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
@@ -1448,25 +1333,6 @@ export default {
       this.saveModelConfig();
     },
 
-    isToolSelected(toolId) {
-      return this.selectedTools.some(t => t.toolId === toolId);
-    },
-
-    async toggleTool(tool) {
-      const index = this.selectedTools.findIndex(t => t.toolId === tool.toolId);
-      if (index > -1) {
-        this.selectedTools.splice(index, 1);
-      } else {
-        this.selectedTools.push({
-          toolId: tool.toolId,
-          toolName: tool.toolName,
-          toolType: tool.toolType,
-        });
-      }
-      // 静默保存配置，不显示消息
-      await this.saveModelConfig(true);
-    },
-
     async sendMessage() {
       const content = this.inputMessage.trim();
       if (!content && this.uploadedFiles.length === 0) return;
@@ -1474,13 +1340,6 @@ export default {
       // 检查当前会话是否正在流式传输
       const currentStreaming = this.streamingMap[this.currentThreadId];
       if (currentStreaming && currentStreaming.isStreaming) return;
-
-      // 检查是否有文件正在上传
-      const uploadingFiles = this.uploadedFiles.filter(f => f.uploading);
-      if (uploadingFiles.length > 0) {
-        this.$message.warning('请等待文件上传完成');
-        return;
-      }
 
       if (this.isNewConversation || !this.currentThreadId) {
         const title = content.slice(0, 50);
@@ -1687,8 +1546,8 @@ export default {
               const activity = {
                 type: 'activity',
                 activityType: parsed.activityType,
-                activityId: parsed.activityId || '',
-                agentName: activityContent.agentName || '',
+                activityId: parsed.activityId,
+                agentName: activityContent.agentName,
                 fragments: [],
                 isStreaming: true,
                 startTime: Date.now(),
@@ -1758,7 +1617,7 @@ export default {
           streamState.currentFragment = {
             type: 'reasoning',
             content: '',
-            messageId: parsed.messageId || '',
+            messageId: parsed.messageId,
             startTime: Date.now(),
             isStreaming: true,
           };
@@ -1773,9 +1632,9 @@ export default {
             streamState.currentFragment &&
             streamState.currentFragment.type === 'reasoning'
           ) {
-            streamState.currentFragment.content += parsed.delta || '';
+            streamState.currentFragment.content += parsed.delta;
             if (!streamState.currentActivity) {
-              assistantMessage.reasoning += parsed.delta || '';
+              assistantMessage.reasoning += parsed.delta;
             }
           }
           break;
@@ -1799,7 +1658,7 @@ export default {
           streamState.currentFragment = {
             type: 'text',
             content: '',
-            messageId: parsed.messageId || '',
+            messageId: parsed.messageId,
             isStreaming: true,
           };
           addFragment(streamState.currentFragment);
@@ -1814,9 +1673,9 @@ export default {
             streamState.currentFragment &&
             streamState.currentFragment.type === 'text'
           ) {
-            streamState.currentFragment.content += parsed.delta || '';
+            streamState.currentFragment.content += parsed.delta;
             if (!streamState.currentActivity) {
-              assistantMessage.content += parsed.delta || '';
+              assistantMessage.content += parsed.delta;
             }
           }
           break;
@@ -1846,7 +1705,7 @@ export default {
           streamState.currentFragment = {
             type: 'tool_call',
             toolCall: toolCallData,
-            messageId: parsed.messageId || '',
+            messageId: parsed.messageId,
           };
           addFragment(streamState.currentFragment);
           if (this.currentThreadId === streamingThreadId) {
@@ -1858,7 +1717,7 @@ export default {
         case 'TOOL_CALL_ARGS':
           if (streamState.toolCallMap.has(parsed.toolCallId)) {
             const toolCall = streamState.toolCallMap.get(parsed.toolCallId);
-            toolCall.arguments += parsed.delta || '';
+            toolCall.arguments += parsed.delta;
           }
           break;
 
@@ -1870,7 +1729,7 @@ export default {
         case 'TOOL_CALL_RESULT':
           if (streamState.toolCallMap.has(parsed.toolCallId)) {
             const toolCall = streamState.toolCallMap.get(parsed.toolCallId);
-            toolCall.result = parsed.content || '';
+            toolCall.result = parsed.content;
             toolCall.status = 'completed';
             if (toolCall.startTime) {
               toolCall.executionTime = formatDuration(
@@ -1883,7 +1742,7 @@ export default {
             t => t.id === parsed.toolCallId,
           );
           if (tc) {
-            tc.result = parsed.content || '';
+            tc.result = parsed.content;
             tc.status = 'completed';
             if (tc.startTime) {
               tc.executionTime = formatDuration(Date.now() - tc.startTime);
@@ -1894,7 +1753,7 @@ export default {
             f => f.type === 'tool_call' && f.toolCall?.id === parsed.toolCallId,
           );
           if (toolCallFragment && toolCallFragment.toolCall) {
-            toolCallFragment.toolCall.result = parsed.content || '';
+            toolCallFragment.toolCall.result = parsed.content;
             toolCallFragment.toolCall.status = 'completed';
             if (toolCallFragment.toolCall.startTime) {
               toolCallFragment.toolCall.executionTime = formatDuration(
@@ -1945,17 +1804,6 @@ export default {
         console.error('加载工作空间文件失败:', error);
       } finally {
         this.workspaceLoading = false;
-      }
-    },
-
-    toggleWorkspacePanel() {
-      if (this.panelVisible) {
-        this.hidePanel();
-      } else {
-        this.showPanel();
-        if (this.activeWorkspace) {
-          this.loadWorkspaceFiles();
-        }
       }
     },
 

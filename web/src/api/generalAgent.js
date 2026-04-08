@@ -46,26 +46,24 @@ export const getGeneralAgentToolInfo = params => {
 };
 
 /**
- * 更新工具配置
+ * 更新全局配置
  * @param {Array} toolList - 工具列表 [{ toolId, toolType }]
  * @param {Array} assistantList - 智能体列表 [{ assistantId, assistantType }]
- * @deprecated 请使用 updateGeneralAgentConfig
  */
-export const updateGeneralAgentToolConfig = data => {
+export const updateGeneralAgentGlobalConfig = data => {
   return service({
-    url: `${BASE_URL}/conversation/config`,
+    url: `${BASE_URL}/config`,
     method: 'put',
     data,
   });
 };
 
 /**
- * 获取工具配置
- * @deprecated 请使用 getGeneralAgentConfig
+ * 获取全局配置
  */
-export const getGeneralAgentToolConfig = () => {
+export const getGeneralAgentGlobalConfig = () => {
   return service({
-    url: `${BASE_URL}/conversation/config`,
+    url: `${BASE_URL}/config`,
     method: 'get',
   });
 };
@@ -130,7 +128,7 @@ export const getGeneralAgentConversationDetail = params => {
  * 返回：threadId, modelConfig, toolList, assistantList
  * @param {string} threadId - 对话ID（必填）
  */
-export const getGeneralAgentConfig = params => {
+export const getGeneralAgentConversationConfig = params => {
   return service({
     url: `${BASE_URL}/conversation/config`,
     method: 'get',
@@ -145,22 +143,10 @@ export const getGeneralAgentConfig = params => {
  * @param {Array} toolList - 工具列表 [{ toolId, toolType }]
  * @param {Array} assistantList - 智能体列表 [{ assistantId, assistantType }]
  */
-export const updateGeneralAgentConfig = data => {
+export const updateGeneralAgentConversationConfig = data => {
   return service({
     url: `${BASE_URL}/conversation/config`,
     method: 'put',
-    data,
-  });
-};
-
-/**
- * 检查配置有效性
- * @param {string} threadId - 对话ID（必填）
- */
-export const checkGeneralAgentConfig = data => {
-  return service({
-    url: `${BASE_URL}/conversation/config/check`,
-    method: 'post',
     data,
   });
 };
@@ -333,32 +319,5 @@ export const previewGeneralAgentWorkspace = params => {
     method: 'get',
     params,
     responseType: 'blob',
-  });
-};
-
-/**
- * 上传文件到通用智能体（直接上传）
- * @param {File} file - 文件对象
- * @param {function} onProgress - 进度回调 (percent) => {}
- * @returns {Promise<{code: number, data: {files: Array}, msg: string}>}
- */
-export const uploadGeneralAgentFile = (file, onProgress) => {
-  const formData = new FormData();
-  formData.append('files', file);
-  return service({
-    url: `${SERVICE_API}/file/upload/direct`,
-    method: 'post',
-    data: formData,
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    onUploadProgress: progressEvent => {
-      if (onProgress && progressEvent.total) {
-        const percent = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total,
-        );
-        onProgress(percent);
-      }
-    },
   });
 };
