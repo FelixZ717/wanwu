@@ -1229,44 +1229,6 @@ export default {
       }
     },
 
-    async saveModelConfig(silent = false) {
-      if (!this.currentThreadId) {
-        return;
-      }
-      if (!this.selectedModel) {
-        if (!silent) {
-          this.$message.warning('请选择模型');
-        }
-        return;
-      }
-      try {
-        const selectedModelConfig = this.modelList.find(
-          m => m.modelId === this.selectedModel,
-        );
-        const res = await updateGeneralAgentConversationConfig({
-          threadId: this.currentThreadId,
-          modelConfig: {
-            modelId: this.selectedModel,
-            model: selectedModelConfig?.model,
-            provider: selectedModelConfig?.provider,
-            displayName: selectedModelConfig?.displayName,
-            modelType: selectedModelConfig?.modelType || 'llm',
-            config: selectedModelConfig?.config || {},
-          },
-        });
-        if (res.code === 0) {
-          if (!silent) {
-            this.$message.success('配置已保存');
-          }
-        } else {
-          this.$message.error(res.msg || '保存模型配置失败');
-        }
-      } catch (error) {
-        console.error('保存模型配置失败:', error);
-        this.$message.error('保存模型配置失败');
-      }
-    },
-
     formatContent(content) {
       if (typeof content === 'string') return content;
       if (Array.isArray(content)) {
@@ -1329,8 +1291,25 @@ export default {
       this.uploadedFiles.splice(index, 1);
     },
 
-    handleModelChange() {
-      this.saveModelConfig();
+    handleModelChange(value) {
+      if (!this.currentThreadId) {
+        return;
+      }
+      const selectedModelConfig = this.modelList.find(m => m.modelId === value);
+      const res = updateGeneralAgentConversationConfig({
+        threadId: this.currentThreadId,
+        modelConfig: {
+          modelId: value,
+          model: selectedModelConfig?.model,
+          provider: selectedModelConfig?.provider,
+          displayName: selectedModelConfig?.displayName,
+          modelType: selectedModelConfig?.modelType || 'llm',
+          config: selectedModelConfig?.config || {},
+        },
+      });
+      if (res.code === 0) {
+        this.$message.success('配置已保存');
+      }
     },
 
     async sendMessage() {
