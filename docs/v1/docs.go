@@ -3739,7 +3739,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/response.AppBriefInfo"
+                                                                "$ref": "#/definitions/response.ExplorationAppInfo"
                                                             }
                                                         }
                                                     }
@@ -6509,6 +6509,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/mcp/select": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体MCP下拉接口列表，用于用户选择MCP进行对话",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体MCP下拉接口列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP名称",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.MCPSelect"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/general/agent/tool/info": {
             "get": {
                 "security": [
@@ -6606,6 +6669,69 @@ const docTemplate = `{
                                                             "type": "array",
                                                             "items": {
                                                                 "$ref": "#/definitions/response.GetGeneralAgentToolSelectResp"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/workflow/select": {
+            "get": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "获取通用智能体工作流列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "通用智能体工作流列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "workflow名称",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.ListResult"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/response.ExplorationAppInfo"
                                                             }
                                                         }
                                                     }
@@ -21492,6 +21618,23 @@ const docTemplate = `{
                 }
             }
         },
+        "request.MCPSelected": {
+            "type": "object",
+            "required": [
+                "mcpId",
+                "mcpType"
+            ],
+            "properties": {
+                "mcpId": {
+                    "description": "MCP ID",
+                    "type": "string"
+                },
+                "mcpType": {
+                    "description": "MCP类型 mcp/mcpserver",
+                    "type": "string"
+                }
+            }
+        },
         "request.MCPServerCreateReq": {
             "type": "object",
             "required": [
@@ -22747,17 +22890,31 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "assistantList": {
-                    "description": "智能体ID",
+                    "description": "智能体列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/request.AssistantSelected"
                     }
                 },
+                "mcpList": {
+                    "description": "MCP列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.MCPSelected"
+                    }
+                },
                 "toolList": {
-                    "description": "工具ID",
+                    "description": "工具列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/request.ToolSelected"
+                    }
+                },
+                "workflowList": {
+                    "description": "工作流列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.WorkflowSelected"
                     }
                 }
             }
@@ -23304,6 +23461,18 @@ const docTemplate = `{
                     "additionalProperties": {}
                 },
                 "workflow_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.WorkflowSelected": {
+            "type": "object",
+            "required": [
+                "workflowId"
+            ],
+            "properties": {
+                "workflowId": {
+                    "description": "工作流ID",
                     "type": "string"
                 }
             }
@@ -25898,11 +26067,25 @@ const docTemplate = `{
                         "$ref": "#/definitions/request.AssistantSelected"
                     }
                 },
+                "mcpList": {
+                    "description": "MCP列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.MCPSelected"
+                    }
+                },
                 "toolList": {
                     "description": "工具列表",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/request.ToolSelected"
+                    }
+                },
+                "workflowList": {
+                    "description": "工作流列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.WorkflowSelected"
                     }
                 }
             }

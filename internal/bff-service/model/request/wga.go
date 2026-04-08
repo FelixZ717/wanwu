@@ -1,11 +1,22 @@
 package request
 
 type UpdateGeneralAgentConfigReq struct {
-	ToolList      []ToolSelected      `json:"toolList"`      // 工具ID
-	AssistantList []AssistantSelected `json:"assistantList"` // 智能体ID
+	ToolList      []ToolSelected      `json:"toolList"`      // 工具列表
+	AssistantList []AssistantSelected `json:"assistantList"` // 智能体列表
+	MCPList       []MCPSelected       `json:"mcpList"`       // MCP列表
+	WorkflowList  []WorkflowSelected  `json:"workflowList"`  // 工作流列表
 }
 
 func (c *UpdateGeneralAgentConfigReq) Check() error { return nil }
+
+type MCPSelected struct {
+	MCPID   string `json:"mcpId" validate:"required"`   // MCP ID
+	MCPType string `json:"mcpType" validate:"required"` // MCP类型 mcp/mcpserver
+}
+
+type WorkflowSelected struct {
+	WorkflowID string `json:"workflowId" validate:"required"` // 工作流ID
+}
 
 type GetGeneralAgentConversationConfigReq struct {
 	ThreadID string `json:"threadId" form:"threadId" validate:"required"` // 对话ID
