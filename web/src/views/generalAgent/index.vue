@@ -206,7 +206,7 @@
                 type="textarea"
                 :rows="1"
                 :autosize="{ minRows: 1, maxRows: 6 }"
-                placeholder="输入问题，按 Enter 发送，Shift+Enter 换行"
+                :placeholder="inputPlaceholder"
                 @keydown.enter.native="handleKeyDown"
                 :disabled="isStreaming"
               />
@@ -463,6 +463,18 @@ export default {
     },
     isEmptyConversation() {
       return this.messageList.length === 0;
+    },
+    inputPlaceholder() {
+      // 如果有选中的模式，使用第一个模式的 placeholder
+      if (this.selectedModes && this.selectedModes.length > 0) {
+        const firstMode = this.selectedModes[0];
+        const modeConfig = this.modeOptions[firstMode.value];
+        if (modeConfig && modeConfig.placeholder) {
+          return modeConfig.placeholder;
+        }
+      }
+      // 默认 placeholder
+      return '选择一款模型,和我对话吧';
     },
   },
   watch: {
