@@ -5,9 +5,7 @@
       @click="toggleExpand"
     >
       <div class="header-left">
-        <i
-          :class="isExpanded ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"
-        ></i>
+        <i :class="isExpanded ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
         <div class="activity-icon-wrapper">
           <img
             :src="require('@/assets/imgs/intelligent.png')"
@@ -16,7 +14,7 @@
         </div>
         <span class="activity-title">{{ activityTitle }}</span>
         <span v-if="fragmentCount > 0" class="fragment-count">
-          {{ fragmentCount }} 个步骤
+          {{ fragmentCount }} {{ $t('generalAgent.activityBlock.steps') }}
         </span>
       </div>
       <div class="header-right">
@@ -28,11 +26,15 @@
         </span>
         <div v-if="isStreaming" class="status-badge running">
           <span class="status-dot"></span>
-          <span class="status-text">执行中</span>
+          <span class="status-text">
+            {{ $t('generalAgent.thinking.running') }}
+          </span>
         </div>
         <div v-else class="status-badge completed">
           <span class="status-dot"></span>
-          <span class="status-text">完成</span>
+          <span class="status-text">
+            {{ $t('generalAgent.thinking.completed') }}
+          </span>
         </div>
       </div>
     </div>
@@ -87,7 +89,9 @@ export default {
       if (this.activityName) {
         return this.activityName;
       }
-      return this.activityType === 'sub_agent' ? '子智能体执行' : '活动';
+      return this.activityType === 'sub_agent'
+        ? this.$t('generalAgent.message.subAgentExecution')
+        : this.$t('generalAgent.activityBlock.defaultTitle');
     },
     fragmentCount() {
       if (!this.fragments) return 0;

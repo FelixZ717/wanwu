@@ -12,7 +12,7 @@
         <div class="preview-actions">
           <el-button size="small" @click="handleDownload">
             <i class="el-icon-download"></i>
-            下载
+            {{ $t('common.button.download') }}
           </el-button>
           <el-button
             size="small"
@@ -23,7 +23,7 @@
             @click="openInNewTab"
           >
             <i class="el-icon-link"></i>
-            新窗口
+            {{ $t('generalAgent.filePreview.newWindow') }}
           </el-button>
           <button class="close-btn" @click="handleClose">
             <i class="el-icon-close"></i>
@@ -34,7 +34,7 @@
         <!-- 加载中 -->
         <div v-if="loading" class="preview-loading">
           <i class="el-icon-loading"></i>
-          <span>加载中...</span>
+          <span>{{ $t('generalAgent.filePreview.loading') }}</span>
         </div>
 
         <!-- 预览内容 -->
@@ -50,7 +50,7 @@
             class="preview-video-wrapper"
           >
             <video :src="previewUrl" controls class="preview-video">
-              您的浏览器不支持视频播放
+              {{ $t('common.fileUpload.videoTips') }}
             </video>
           </div>
 
@@ -63,7 +63,7 @@
               <i class="el-icon-headset"></i>
             </div>
             <audio :src="previewUrl" controls class="preview-audio">
-              您的浏览器不支持音频播放
+              {{ $t('common.fileUpload.audioTips') }}
             </audio>
           </div>
 
@@ -175,7 +175,9 @@
           <div v-else class="preview-unsupported">
             <i class="el-icon-document"></i>
             <p class="file-name">{{ file ? file.name : '' }}</p>
-            <p class="notice-text">此文件类型暂不支持预览</p>
+            <p class="notice-text">
+              {{ $t('generalAgent.filePreview.unsupportedType') }}
+            </p>
           </div>
         </template>
       </div>
@@ -346,7 +348,7 @@ export default {
         }
       } catch (error) {
         console.error('处理文件失败:', error);
-        this.$message.error('处理文件失败');
+        this.$message.error(this.$t('generalAgent.filePreview.processFailed'));
         this.previewType = 'unsupported';
       } finally {
         this.$nextTick(() => {
@@ -402,7 +404,7 @@ export default {
     },
 
     handleError() {
-      this.$message.error('预览失败');
+      this.$message.error(this.$t('generalAgent.filePreview.previewFailed'));
     },
 
     openInNewTab() {
@@ -462,10 +464,10 @@ export default {
         });
 
         resDownloadFile(blob, this.file.name);
-        this.$message.success('下载成功');
+        this.$message.success(this.$t('common.info.save'));
       } catch (error) {
         console.error('下载文件失败:', error);
-        this.$message.error('下载文件失败');
+        this.$message.error(this.$t('knowledgeManage.fileDownloadFailed'));
       }
     },
 
@@ -495,13 +497,13 @@ export default {
               .writeText(text)
               .then(() => {
                 const originalText = e.target.innerText;
-                e.target.innerText = '已复制';
+                e.target.innerText = this.$t('common.copy.copySuccess');
                 setTimeout(() => {
                   e.target.innerText = originalText;
                 }, 1500);
               })
               .catch(() => {
-                this.$message.error('复制失败');
+                this.$message.error(this.$t('tempSquare.copyFailed'));
               });
           }
         };
@@ -533,13 +535,13 @@ export default {
               .writeText(text)
               .then(() => {
                 const originalText = e.target.innerText;
-                e.target.innerText = '已复制';
+                e.target.innerText = this.$t('common.copy.copySuccess');
                 setTimeout(() => {
                   e.target.innerText = originalText;
                 }, 1500);
               })
               .catch(() => {
-                this.$message.error('复制失败');
+                this.$message.error(this.$t('tempSquare.copyFailed'));
               });
           }
         };
@@ -557,7 +559,9 @@ export default {
 
     handleWordError(error) {
       console.error('Word 文档渲染失败:', error);
-      this.$message.error('Word 文档预览失败');
+      this.$message.error(
+        this.$t('generalAgent.filePreview.wordPreviewFailed'),
+      );
     },
   },
 };

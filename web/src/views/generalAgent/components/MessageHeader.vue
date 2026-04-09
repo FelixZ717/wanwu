@@ -1,5 +1,8 @@
 <template>
-  <div class="message-header" :class="{ 'assistant-only': role === 'assistant' }">
+  <div
+    class="message-header"
+    :class="{ 'assistant-only': role === 'assistant' }"
+  >
     <div :class="['avatar', role]">
       <img v-if="computedAvatarUrl" :src="computedAvatarUrl" :alt="roleLabel" />
       <i v-else :class="avatarIcon"></i>
@@ -11,7 +14,7 @@
       </div>
       <div v-if="isStreaming" class="streaming-badge">
         <span class="pulse"></span>
-        <span>生成中</span>
+        <span>{{ $t('app.generate.generating') }}</span>
       </div>
     </template>
   </div>
@@ -47,11 +50,11 @@ export default {
     ...mapGetters('user', ['userAvatar', 'commonInfo']),
     roleLabel() {
       const labels = {
-        user: 'You',
-        assistant: 'Assistant',
-        tool: 'Tool',
-        system: 'System',
-        reasoning: 'Thinking',
+        user: this.$t('generalAgent.messageHeader.user'),
+        assistant: this.$t('generalAgent.messageHeader.assistant'),
+        tool: this.$t('generalAgent.messageHeader.tool'),
+        system: this.$t('generalAgent.messageHeader.system'),
+        reasoning: this.$t('generalAgent.messageHeader.reasoning'),
       };
       return labels[this.role] || this.role;
     },

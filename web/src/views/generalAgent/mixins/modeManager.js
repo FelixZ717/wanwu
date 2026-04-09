@@ -6,48 +6,53 @@ export default {
   data() {
     return {
       selectedModes: [],
-      modeOptions: {
-        research: {
-          label: '深度研究',
-          icon: 'el-icon-aim',
-          value: 'research',
-          placeholder: '选择一款模型,告诉我想要研究的内容,获取研究报告',
-        },
-        analysis: {
-          label: '数据分析',
-          icon: 'el-icon-data-analysis',
-          value: 'analysis',
-          placeholder: '选择一款模型,上传excel或csv文件,进行数据分析',
-        },
-        ppt: {
-          label: '创建ppt',
-          icon: 'el-icon-document',
-          value: 'ppt',
-          placeholder: '选择一款模型,告诉我想要生成的PPT主题或内容',
-        },
-        excel: {
-          label: '创建excel',
-          icon: 'el-icon-s-grid',
-          value: 'excel',
-          placeholder: '选择一款模型,告诉我想要生成的EXCEL主题或内容',
-        },
-        web: {
-          label: '创建网页',
-          icon: 'el-icon-monitor',
-          value: 'web',
-          placeholder: '选择一款模型,告诉我想要生成的网页主题或内容',
-        },
-        // video: {
-        //   label: '创建视频',
-        //   icon: 'el-icon-video-camera',
-        //   value: 'video',
-        // },
-        // skill: {
-        //   label: '创建skill',
-        //   icon: 'el-icon-cpu',
-        //   value: 'skill',
-        // },
+      modeOptions: null, // 在 created 中初始化以支持 i18n
+    };
+  },
+
+  created() {
+    // 在 created 钩子中初始化 modeOptions，确保 $t 可用
+    this.modeOptions = {
+      research: {
+        label: this.$t('generalAgent.modeManager.research'),
+        icon: 'el-icon-aim',
+        value: 'research',
+        placeholder: this.$t('generalAgent.modeManager.researchPlaceholder'),
       },
+      analysis: {
+        label: this.$t('generalAgent.modeManager.analysis'),
+        icon: 'el-icon-data-analysis',
+        value: 'analysis',
+        placeholder: this.$t('generalAgent.modeManager.analysisPlaceholder'),
+      },
+      ppt: {
+        label: this.$t('generalAgent.modeManager.ppt'),
+        icon: 'el-icon-document',
+        value: 'ppt',
+        placeholder: this.$t('generalAgent.modeManager.pptPlaceholder'),
+      },
+      excel: {
+        label: this.$t('generalAgent.modeManager.excel'),
+        icon: 'el-icon-s-grid',
+        value: 'excel',
+        placeholder: this.$t('generalAgent.modeManager.excelPlaceholder'),
+      },
+      web: {
+        label: this.$t('generalAgent.modeManager.web'),
+        icon: 'el-icon-monitor',
+        value: 'web',
+        placeholder: this.$t('generalAgent.modeManager.webPlaceholder'),
+      },
+      // video: {
+      //   label: '创建视频',
+      //   icon: 'el-icon-video-camera',
+      //   value: 'video',
+      // },
+      // skill: {
+      //   label: '创建skill',
+      //   icon: 'el-icon-cpu',
+      //   value: 'skill',
+      // },
     };
   },
 

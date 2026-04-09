@@ -169,9 +169,13 @@
                       class="docIcon"
                     />
                     <div class="docInfo">
-                      <p class="docInfo_name">文件名：{{ file.fileName }}</p>
+                      <p class="docInfo_name">
+                        {{ $t('knowledgeManage.fileName') }}：{{
+                          file.fileName
+                        }}
+                      </p>
                       <p class="docInfo_size">
-                        文件大小：{{
+                        {{ $t('knowledgeManage.fileSize') }}：{{
                           file.size > 1024
                             ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
                             : (file.size || 0) + ' bytes'
@@ -193,7 +197,7 @@
               <ModelSelect
                 v-model="selectedModel"
                 :options="modelList"
-                placeholder="选择模型"
+                :placeholder="$t('common.model.select')"
                 :loading="modelLoading"
                 :filterable="true"
                 @change="handleModelChange"
@@ -434,7 +438,7 @@ export default {
       const conv = this.conversationList.find(
         c => c.threadId === this.currentThreadId,
       );
-      return conv?.title || '新对话';
+      return conv?.title || this.$t('generalAgent.index.newConversation');
     },
     canSend() {
       const hasContent =
@@ -641,7 +645,7 @@ export default {
       };
 
       const res = await createGeneralAgentConversation({
-        title: title || '新对话',
+        title: title || this.$t('generalAgent.index.newConversation'),
         modelConfig,
       });
 
@@ -658,7 +662,7 @@ export default {
           this.selectedModel = modelConfig.modelId;
           this.conversationList.unshift({
             threadId,
-            title: title || '新对话',
+            title: title || this.$t('generalAgent.index.newConversation'),
             createdAt: new Date().toISOString(),
           });
           return threadId;
@@ -988,12 +992,15 @@ export default {
           runId: this.currentRunId,
           path: '',
         });
-        resDownloadFile(blob, '工作空间.zip');
+        resDownloadFile(blob, this.$t('generalAgent.index.workspaceZip'));
         this.$message.success(
           this.$t('generalAgent.workspace.downloadSuccess'),
         );
       } catch (error) {
-        console.error('下载工作空间失败:', error);
+        console.error(
+          this.$t('generalAgent.index.downloadWorkspaceFailed'),
+          error,
+        );
         this.$message.error(this.$t('generalAgent.workspace.downloadFailed'));
       }
     },
@@ -1030,14 +1037,18 @@ export default {
     },
 
     async handleDeleteConversation(item) {
-      await this.$confirm('确定要删除这个对话吗？', '提示', {
-        type: 'warning',
-      });
+      await this.$confirm(
+        this.$t('generalAgent.index.confirmDeleteConversation'),
+        this.$t('common.button.tip'),
+        {
+          type: 'warning',
+        },
+      );
       const res = await deleteGeneralAgentConversation({
         threadId: item.threadId,
       });
       if (res.code === 0) {
-        this.$message.success('删除成功');
+        this.$message.success(this.$t('common.info.delete'));
         if (this.currentThreadId === item.threadId) {
           this.currentThreadId = '';
           this.isNewConversation = true;

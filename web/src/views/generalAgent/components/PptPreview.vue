@@ -8,17 +8,19 @@
     <!-- 加载状态 -->
     <div v-if="loading" class="ppt-loading">
       <div class="loading-spinner"></div>
-      <span>PPT 加载中...</span>
+      <span>{{ $t('generalAgent.pptPreview.loading') }}</span>
     </div>
 
     <!-- 错误状态 -->
     <div v-else-if="error" class="ppt-error">
       <i class="el-icon-warning-outline"></i>
       <span>{{ error }}</span>
-      <el-button size="small" @click="loadPpt">重试</el-button>
+      <el-button size="small" @click="loadPpt">
+        {{ $t('common.button.retry') }}
+      </el-button>
       <el-button size="small" @click="handleDownload">
         <i class="el-icon-download"></i>
-        下载文件
+        {{ $t('generalAgent.pptPreview.downloadFile') }}
       </el-button>
     </div>
 
@@ -62,7 +64,9 @@
           <i class="el-icon-d-arrow-right"></i>
         </button>
         <span class="slide-name">{{ fileName }}</span>
-        <span class="keyboard-hint">按 ← → 键翻页</span>
+        <span class="keyboard-hint">
+          {{ $t('generalAgent.pptPreview.keyboardHint') }}
+        </span>
       </div>
 
       <!-- 幻灯片显示区域 -->
@@ -144,7 +148,9 @@
             <!-- 其他类型：显示占位符 -->
             <div v-else class="element-unknown">
               <i class="el-icon-document"></i>
-              <span>{{ element.type || '元素' }}</span>
+              <span>
+                {{ element.type || $t('generalAgent.pptPreview.element') }}
+              </span>
             </div>
           </div>
         </div>
@@ -167,10 +173,10 @@
     <!-- 空状态 -->
     <div v-else class="ppt-empty">
       <i class="el-icon-document"></i>
-      <p>无法解析此 PPT 文件</p>
+      <p>{{ $t('generalAgent.pptPreview.parseFailed') }}</p>
       <el-button type="primary" @click="handleDownload">
         <i class="el-icon-download"></i>
-        下载文件
+        {{ $t('generalAgent.pptPreview.downloadFile') }}
       </el-button>
     </div>
   </div>
@@ -188,7 +194,7 @@ export default {
     },
     fileName: {
       type: String,
-      default: '演示文稿.pptx',
+      default: '',
     },
   },
   data() {
