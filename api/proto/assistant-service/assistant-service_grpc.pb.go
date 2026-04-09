@@ -59,6 +59,7 @@ const (
 	AssistantService_AssistantSkillEnableSwitch_FullMethodName          = "/assistant_service.AssistantService/AssistantSkillEnableSwitch"
 	AssistantService_ConversationCreate_FullMethodName                  = "/assistant_service.AssistantService/ConversationCreate"
 	AssistantService_ConversationDelete_FullMethodName                  = "/assistant_service.AssistantService/ConversationDelete"
+	AssistantService_ClearConversationES_FullMethodName                 = "/assistant_service.AssistantService/ClearConversationES"
 	AssistantService_GetConversationIdByAssistantId_FullMethodName      = "/assistant_service.AssistantService/GetConversationIdByAssistantId"
 	AssistantService_GetConversationList_FullMethodName                 = "/assistant_service.AssistantService/GetConversationList"
 	AssistantService_GetConversationDetailList_FullMethodName           = "/assistant_service.AssistantService/GetConversationDetailList"
@@ -138,6 +139,7 @@ type AssistantServiceClient interface {
 	// --- conversation ---
 	ConversationCreate(ctx context.Context, in *ConversationCreateReq, opts ...grpc.CallOption) (*ConversationCreateResp, error)
 	ConversationDelete(ctx context.Context, in *ConversationDeleteReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ClearConversationES(ctx context.Context, in *ClearConversationESReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetConversationIdByAssistantId(ctx context.Context, in *GetConversationIdByAssistantIdReq, opts ...grpc.CallOption) (*ConversationIdResp, error)
 	GetConversationList(ctx context.Context, in *GetConversationListReq, opts ...grpc.CallOption) (*GetConversationListResp, error)
 	GetConversationDetailList(ctx context.Context, in *GetConversationDetailListReq, opts ...grpc.CallOption) (*GetConversationDetailListResp, error)
@@ -569,6 +571,16 @@ func (c *assistantServiceClient) ConversationDelete(ctx context.Context, in *Con
 	return out, nil
 }
 
+func (c *assistantServiceClient) ClearConversationES(ctx context.Context, in *ClearConversationESReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AssistantService_ClearConversationES_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *assistantServiceClient) GetConversationIdByAssistantId(ctx context.Context, in *GetConversationIdByAssistantIdReq, opts ...grpc.CallOption) (*ConversationIdResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConversationIdResp)
@@ -898,6 +910,7 @@ type AssistantServiceServer interface {
 	// --- conversation ---
 	ConversationCreate(context.Context, *ConversationCreateReq) (*ConversationCreateResp, error)
 	ConversationDelete(context.Context, *ConversationDeleteReq) (*emptypb.Empty, error)
+	ClearConversationES(context.Context, *ClearConversationESReq) (*emptypb.Empty, error)
 	GetConversationIdByAssistantId(context.Context, *GetConversationIdByAssistantIdReq) (*ConversationIdResp, error)
 	GetConversationList(context.Context, *GetConversationListReq) (*GetConversationListResp, error)
 	GetConversationDetailList(context.Context, *GetConversationDetailListReq) (*GetConversationDetailListResp, error)
@@ -1055,6 +1068,9 @@ func (UnimplementedAssistantServiceServer) ConversationCreate(context.Context, *
 }
 func (UnimplementedAssistantServiceServer) ConversationDelete(context.Context, *ConversationDeleteReq) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConversationDelete not implemented")
+}
+func (UnimplementedAssistantServiceServer) ClearConversationES(context.Context, *ClearConversationESReq) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClearConversationES not implemented")
 }
 func (UnimplementedAssistantServiceServer) GetConversationIdByAssistantId(context.Context, *GetConversationIdByAssistantIdReq) (*ConversationIdResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetConversationIdByAssistantId not implemented")
@@ -1857,6 +1873,24 @@ func _AssistantService_ConversationDelete_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AssistantService_ClearConversationES_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClearConversationESReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AssistantServiceServer).ClearConversationES(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AssistantService_ClearConversationES_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AssistantServiceServer).ClearConversationES(ctx, req.(*ClearConversationESReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AssistantService_GetConversationIdByAssistantId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetConversationIdByAssistantIdReq)
 	if err := dec(in); err != nil {
@@ -2473,6 +2507,10 @@ var AssistantService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConversationDelete",
 			Handler:    _AssistantService_ConversationDelete_Handler,
+		},
+		{
+			MethodName: "ClearConversationES",
+			Handler:    _AssistantService_ClearConversationES_Handler,
 		},
 		{
 			MethodName: "GetConversationIdByAssistantId",

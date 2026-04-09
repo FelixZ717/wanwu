@@ -800,6 +800,22 @@ func ConversationDelete(ctx *gin.Context, userId, orgId string, req request.Conv
 	return nil, nil
 }
 
+func ClearPublishedConversationES(ctx *gin.Context, userId, orgId string, req request.ConversationIdRequest) (interface{}, error) {
+	// 清空已发布智能体的对话ES数据（不删除会话ID）
+	_, err := assistant.ClearConversationES(ctx.Request.Context(), &assistant_service.ClearConversationESReq{
+		ConversationId: req.ConversationId,
+		Identity: &assistant_service.Identity{
+			UserId: userId,
+			OrgId:  orgId,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func GetDraftConversationIdByAssistantID(ctx *gin.Context, userId, orgId string, req request.ConversationGetListRequest) (*response.ConversationIdResp, error) {
 	resp, err := assistant.GetConversationIdByAssistantId(ctx.Request.Context(), &assistant_service.GetConversationIdByAssistantIdReq{
 		AssistantId:      req.AssistantId,
