@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -51,27 +50,39 @@ func (s *Service) ConversationCreate(ctx context.Context, req *assistant_service
 // ConversationDelete 删除对话
 func (s *Service) ConversationDelete(ctx context.Context, req *assistant_service.ConversationDeleteReq) (*emptypb.Empty, error) {
 	// 转换ID
-	conversationID, err := strconv.ParseUint(req.ConversationId, 10, 32)
-	if err != nil {
-		return nil, err
-	}
+	conversationID := util.MustU32(req.ConversationId)
 
 	// 调用client方法删除对话
-	if status := s.cli.DeleteConversation(ctx, uint32(conversationID)); status != nil {
+	if status := s.cli.DeleteConversation(ctx, conversationID); status != nil {
 		return nil, errStatus(errs.Code_AssistantConversationErr, status)
 	}
 
 	// 删除es中的对话详情
-	fieldConditions := map[string]interface{}{
-		"conversationId.keyword": req.ConversationId,
-		"userId.keyword":         req.Identity.UserId,
-	}
-	indexPattern := "conversation_detail_infos_*"
-	if err := es.Assistant().DeleteByFields(ctx, indexPattern, fieldConditions); err != nil {
+	if err := deleteConversationDetailFromES(ctx, req.ConversationId, req.Identity.UserId); err != nil {
 		log.Errorf("从ES删除对话详情失败，conversationId: %s, error: %v", req.ConversationId, err)
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+// ClearConversationES 清空对话ES数据（不删除会话ID）
+func (s *Service) ClearConversationES(ctx context.Context, req *assistant_service.ClearConversationESReq) (*emptypb.Empty, error) {
+	// 删除es中的对话详情（不删除数据库会话记录）
+	if err := deleteConversationDetailFromES(ctx, req.ConversationId, req.Identity.UserId); err != nil {
+		log.Errorf("从ES删除对话详情失败，conversationId: %s, error: %v", req.ConversationId, err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+// deleteConversationDetailFromES 删除ES中的对话详情数据
+func deleteConversationDetailFromES(ctx context.Context, conversationId, userId string) error {
+	fieldConditions := map[string]interface{}{
+		"conversationId": conversationId,
+		"userId.keyword": userId,
+	}
+	indexPattern := "conversation_detail_infos_*"
+	return es.Assistant().DeleteByFields(ctx, indexPattern, fieldConditions)
 }
 
 // GetConversationIdByAssistantId 获取对话记录id

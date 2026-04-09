@@ -1464,12 +1464,8 @@ definitions:
       assistantId:
         description: 智能体ID
         type: string
-      assistantType:
-        description: 智能体类型
-        type: string
     required:
     - assistantId
-    - assistantType
     type: object
   request.AssistantSkillAddRequest:
     properties:
@@ -2802,17 +2798,6 @@ definitions:
     required:
     - content
     - role
-    type: object
-  request.GeneralAgentCopilotRuntimeReq:
-    properties:
-      body:
-        additionalProperties: true
-        type: object
-      method:
-        type: string
-      params:
-        additionalProperties: true
-        type: object
     type: object
   request.GetModelRequest:
     properties:
@@ -6086,30 +6071,6 @@ definitions:
         type: string
       title:
         description: 对话标题
-        type: string
-    type: object
-  response.GeneralAgentCopilotRuntimeInfoAgent:
-    properties:
-      className:
-        type: string
-      description:
-        type: string
-      name:
-        type: string
-    type: object
-  response.GeneralAgentCopilotRuntimeInfoResp:
-    properties:
-      a2uiEnabled:
-        type: boolean
-      agents:
-        additionalProperties:
-          $ref: '#/definitions/response.GeneralAgentCopilotRuntimeInfoAgent'
-        type: object
-      audioFileTranscriptionEnabled:
-        type: boolean
-      mode:
-        type: string
-      version:
         type: string
     type: object
   response.GeneralAgentFileInfo:
@@ -10214,6 +10175,30 @@ paths:
       summary: 创建智能体对话
       tags:
       - agent
+  /assistant/conversation/clear:
+    delete:
+      consumes:
+      - application/json
+      description: 清空已发布智能体对话ES数据，不删除会话ID
+      parameters:
+      - description: 智能体对话清空参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.ConversationIdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 清空已发布智能体对话
+      tags:
+      - agent
   /assistant/conversation/detail:
     get:
       consumes:
@@ -12190,30 +12175,6 @@ paths:
       security:
       - JWT: []
       summary: 通用智能体workspace预览
-      tags:
-      - wga
-  /general/agent/copilotkit:
-    post:
-      consumes:
-      - application/json
-      description: 通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info,agent/connect,agent/run,agent/stop
-      parameters:
-      - description: CopilotRuntime请求参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/request.GeneralAgentCopilotRuntimeReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: CopilotRuntime信息
-          schema:
-            $ref: '#/definitions/response.GeneralAgentCopilotRuntimeInfoResp'
-      security:
-      - JWT: []
-      summary: 通用智能体CopilotRuntime协议端点
       tags:
       - wga
   /general/agent/mcp/select:

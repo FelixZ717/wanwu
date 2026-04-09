@@ -3121,6 +3121,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/conversation/clear": {
+            "delete": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "清空已发布智能体对话ES数据，不删除会话ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agent"
+                ],
+                "summary": "清空已发布智能体对话",
+                "parameters": [
+                    {
+                        "description": "智能体对话清空参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ConversationIdRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/conversation/detail": {
             "get": {
                 "security": [
@@ -6465,45 +6504,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "type": "file"
-                        }
-                    }
-                }
-            }
-        },
-        "/general/agent/copilotkit": {
-            "post": {
-                "security": [
-                    {
-                        "JWT": []
-                    }
-                ],
-                "description": "通用智能体CopilotRuntime协议端点，用于CopilotKit框架调用，支持method=info,agent/connect,agent/run,agent/stop",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "wga"
-                ],
-                "summary": "通用智能体CopilotRuntime协议端点",
-                "parameters": [
-                    {
-                        "description": "CopilotRuntime请求参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.GeneralAgentCopilotRuntimeReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "CopilotRuntime信息",
-                        "schema": {
-                            "$ref": "#/definitions/response.GeneralAgentCopilotRuntimeInfoResp"
                         }
                     }
                 }
@@ -19052,16 +19052,11 @@ const docTemplate = `{
         "request.AssistantSelected": {
             "type": "object",
             "required": [
-                "assistantId",
-                "assistantType"
+                "assistantId"
             ],
             "properties": {
                 "assistantId": {
                     "description": "智能体ID",
-                    "type": "string"
-                },
-                "assistantType": {
-                    "description": "智能体类型",
                     "type": "string"
                 }
             }
@@ -21022,22 +21017,6 @@ const docTemplate = `{
                 "role": {
                     "description": "角色 user",
                     "type": "string"
-                }
-            }
-        },
-        "request.GeneralAgentCopilotRuntimeReq": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "method": {
-                    "type": "string"
-                },
-                "params": {
-                    "type": "object",
-                    "additionalProperties": true
                 }
             }
         },
@@ -25888,43 +25867,6 @@ const docTemplate = `{
                 },
                 "title": {
                     "description": "对话标题",
-                    "type": "string"
-                }
-            }
-        },
-        "response.GeneralAgentCopilotRuntimeInfoAgent": {
-            "type": "object",
-            "properties": {
-                "className": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.GeneralAgentCopilotRuntimeInfoResp": {
-            "type": "object",
-            "properties": {
-                "a2uiEnabled": {
-                    "type": "boolean"
-                },
-                "agents": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/response.GeneralAgentCopilotRuntimeInfoAgent"
-                    }
-                },
-                "audioFileTranscriptionEnabled": {
-                    "type": "boolean"
-                },
-                "mode": {
-                    "type": "string"
-                },
-                "version": {
                     "type": "string"
                 }
             }

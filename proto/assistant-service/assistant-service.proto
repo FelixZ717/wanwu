@@ -62,6 +62,7 @@ service AssistantService {
   // --- conversation ---
   rpc ConversationCreate(ConversationCreateReq) returns (ConversationCreateResp) {}
   rpc ConversationDelete(ConversationDeleteReq) returns (google.protobuf.Empty) {}
+  rpc ClearConversationES(ClearConversationESReq) returns (google.protobuf.Empty) {}
   rpc GetConversationIdByAssistantId(GetConversationIdByAssistantIdReq) returns (ConversationIdResp) {}
   rpc GetConversationList(GetConversationListReq) returns (GetConversationListResp) {}
   rpc GetConversationDetailList(GetConversationDetailListReq) returns (GetConversationDetailListResp) {}
@@ -555,6 +556,11 @@ message GetConversationIdByAssistantIdReq{
   string assistantId = 1;
   string conversationType = 2;
   Identity identity = 3;
+}
+
+message ClearConversationESReq{
+  string conversationId = 1;
+  Identity identity = 2;
 }
 
 message GetConversationListReq {
