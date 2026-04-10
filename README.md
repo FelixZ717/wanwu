@@ -224,7 +224,7 @@ The platform has been successfully applied in multiple industries such as **fina
 
 ### 📦 Sandbox Startup
 
-The Wanwu sandbox can be used for features like creating Skills with a single command and needs to be started separately; note that when creating Skills, the selected model must have a context length >= 32000 when importing.
+The Wanwu sandbox can be used for features like WanwuBot(General Agent), creating Skills with a single command and needs to be started separately; note that when using WanwuBot, creating Skills, the selected model must have a context length >= 32000 when importing.
 
 1. Based on the above Docker installation steps, complete the configuration before the first run
 
@@ -318,9 +318,9 @@ The F1 score serving as the comprehensive evaluation metric (the harmonic mean o
 
 ### &#x1F4F0; TO DO LIST
 
-- [ ] Skills
+- [x] General Agent
+- [x] Skills
 - [ ] Support importing databases into knowledge base
-- [ ] General Agent
 - [ ] A2A Protocol
 - [ ] Agent and Model Evaluation
 - [ ] Trace Tracking
