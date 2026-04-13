@@ -144,6 +144,19 @@
           </div>
 
           <div class="input-container">
+            <!-- 模型选择 -->
+            <div style="margin-bottom: 12px">
+              <ModelSelect
+                v-model="selectedModel"
+                :options="modelList"
+                :placeholder="$t('common.model.select')"
+                :loading="modelLoading"
+                :filterable="true"
+                @change="handleModelChange"
+                class="model-select-inline"
+              />
+            </div>
+
             <!-- 文件预览 -->
             <div v-if="uploadedFiles.length > 0" class="file-preview">
               <!-- 图片文件 -->
@@ -189,19 +202,6 @@
                   ></i>
                 </div>
               </div>
-            </div>
-
-            <!-- 模型选择 -->
-            <div style="margin-bottom: 12px">
-              <ModelSelect
-                v-model="selectedModel"
-                :options="modelList"
-                :placeholder="$t('common.model.select')"
-                :loading="modelLoading"
-                :filterable="true"
-                @change="handleModelChange"
-                class="model-select-inline"
-              />
             </div>
 
             <!-- 输入框 -->
