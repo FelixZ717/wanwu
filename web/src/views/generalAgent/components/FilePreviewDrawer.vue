@@ -190,7 +190,6 @@ import PptPreview from './PptPreview.vue';
 import { md, highlightCode } from '../utils/markdown';
 import VueOfficeDocx from '@vue-office/docx';
 import '@vue-office/docx/lib/index.css';
-import { downloadGeneralAgentWorkspace } from '@/api/generalAgent';
 import { resDownloadFile, getFileType } from '@/utils/util';
 import * as XLSX from 'xlsx';
 
@@ -452,22 +451,18 @@ export default {
 
     // 下载文件
     async handleDownload() {
-      if (!this.file || !this.filePath || !this.threadId || !this.runId) {
+      if (!this.file || !this.blob) {
         return;
       }
 
       try {
-        const blob = await downloadGeneralAgentWorkspace({
-          threadId: this.threadId,
-          runId: this.runId,
-          path: this.filePath,
-        });
-
-        resDownloadFile(blob, this.file.name);
-        this.$message.success(this.$t('common.info.save'));
+        resDownloadFile(this.blob, this.file.name);
+        this.$message.success(
+          this.$t('generalAgent.workspace.downloadSuccess'),
+        );
       } catch (error) {
         console.error('下载文件失败:', error);
-        this.$message.error(this.$t('knowledgeManage.fileDownloadFailed'));
+        this.$message.error(this.$t('generalAgent.workspace.downloadFailed'));
       }
     },
 

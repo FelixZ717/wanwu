@@ -181,18 +181,13 @@ export default {
           }
 
           if (text) {
-            navigator.clipboard
-              .writeText(text)
-              .then(() => {
-                const originalText = e.target.innerText;
-                e.target.innerText = '已复制';
-                setTimeout(() => {
-                  e.target.innerText = originalText;
-                }, 1500);
-              })
-              .catch(() => {
-                this.$message?.error('复制失败');
-              });
+            this.$copy(text).then(() => {
+              const originalText = e.target.innerText;
+              e.target.innerText = '已复制';
+              setTimeout(() => {
+                e.target.innerText = originalText;
+              }, 1500);
+            });
           }
         };
         btn.addEventListener('click', handler);

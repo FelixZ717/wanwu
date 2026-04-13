@@ -82,6 +82,7 @@ export function highlightCode(code, lang) {
  */
 export const md = MarkdownIt({
   html: true,
+  linkify: true, // 启用自动链接识别,将纯文本URL转换为可点击链接
   highlight: function (str, lang) {
     return highlightCode(str, lang);
   },
