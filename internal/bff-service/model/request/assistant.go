@@ -145,6 +145,7 @@ func (c *ConversationDeleteRequest) Check() error { return nil }
 
 type ConversationIdRequest struct {
 	ConversationId string `json:"conversationId" form:"conversationId"  validate:"required"`
+	DetailId       string `json:"detailId" form:"detailId"` // 可选，传值则删除单条对话，不传则删除全部对话
 }
 
 func (c *ConversationIdRequest) Check() error { return nil }
