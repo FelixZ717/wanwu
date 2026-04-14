@@ -84,3 +84,8 @@ const (
 	AppStatisticSourceWebUrl  = "webURL"
 	AppStatisticSourceDraft   = "draft" // 应用的草稿版本不统计
 )
+
+const (
+	MCPTransportSSE        = "sse"
+	MCPTransportStreamable = "streamable"
+)
