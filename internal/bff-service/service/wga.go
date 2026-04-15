@@ -50,30 +50,27 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId, agentId string) 
 		}
 	}
 
-	defaultAgentId := config.WgaCfg().AgentID
-	if agentId == "" {
-		agentId = defaultAgentId
-	}
-
 	// 获取全量工具列表
-	toolCategories, err := wga.GetAgentToolCategories(defaultAgentId)
+	toolCategories, err := wga.GetAgentToolCategories(config.WgaCfg().AgentID)
 	if err != nil {
 		return nil, err
 	}
-
-	if agentId != defaultAgentId {
-		// 获取指定agentId的工具列表
-		overrideCategories, err := wga.GetAgentToolCategories(agentId)
+	// 对全量工具列表进行条件覆盖，默认不限制工具选择
+	for _, toolCategory := range toolCategories {
+		toolCategory.Condition = "none"
+	}
+	// 如果agentId不为空，则根据agentId获取工具选择条件进行覆盖，限制工具选择
+	if agentId != "" {
+		agentToolCategories, err := wga.GetAgentToolCategories(agentId)
 		if err != nil {
 			return nil, err
 		}
-		overrideMap := make(map[string]*wga_option.ToolCategoryInfo)
-		for i := range overrideCategories {
-			overrideMap[string(overrideCategories[i].Category)] = overrideCategories[i]
-		}
-		for i := range toolCategories {
-			if overrideCat, ok := overrideMap[string(toolCategories[i].Category)]; ok {
-				toolCategories[i] = overrideCat
+		for _, toolCategory := range toolCategories {
+			for _, agentToolCategory := range agentToolCategories {
+				if toolCategory.Category == agentToolCategory.Category {
+					toolCategory.Condition = agentToolCategory.Condition
+					break
+				}
 			}
 		}
 	}
@@ -82,24 +79,22 @@ func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId, agentId string) 
 	for _, tc := range toolCategories {
 		categoryResp := response.GetGeneralAgentToolSelectResp{
 			Category:  gin_util.I18nKey(ctx, string(tc.Category)),
-			Condition: util.IfElse(agentId != "", string(tc.Condition), "none"), // 如果agentId为空，则不限制工具选择
+			Condition: string(tc.Condition),
 			ToolList:  []response.ToolInfo{},
 		}
 
 		for _, t := range tc.Tools {
-			toolInfo := response.ToolInfo{}
-
 			if item, ok := toolNameToInfo[t.Doc.Info.Title]; ok {
-				toolInfo.ToolId = item.ToolId
-				toolInfo.ToolName = item.ToolName
-				toolInfo.ToolType = item.ToolType
-				toolInfo.Desc = item.Desc
-				toolInfo.NeedApiKeyInput = item.NeedApiKeyInput
-				toolInfo.APIKey = item.ApiKey
-				toolInfo.Avatar = cacheToolAvatar(ctx, constant.ToolTypeBuiltIn, item.AvatarPath)
+				categoryResp.ToolList = append(categoryResp.ToolList, response.ToolInfo{
+					ToolId:          item.ToolId,
+					ToolName:        item.ToolName,
+					ToolType:        item.ToolType,
+					Desc:            item.Desc,
+					NeedApiKeyInput: item.NeedApiKeyInput,
+					APIKey:          item.ApiKey,
+					Avatar:          cacheToolAvatar(ctx, constant.ToolTypeBuiltIn, item.AvatarPath),
+				})
 			}
-
-			categoryResp.ToolList = append(categoryResp.ToolList, toolInfo)
 		}
 
 		result = append(result, categoryResp)
