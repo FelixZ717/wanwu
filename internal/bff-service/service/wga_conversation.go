@@ -271,10 +271,10 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	wgaConfig := wgaConfigResp.Config
 
 	// 解析用户消息中的 @提及资源
-	var mentionResources *MentionResources
+	var mentionResources *wgaMentionResources
 	if userInputMessage != nil {
-		mentionNames := parseResourceMentions(userInputMessage.Content)
-		mentionResources = fetchMentionResources(ctx, userID, orgID, mentionNames)
+		mentionNames := parseWgaResourceMentions(userInputMessage.Content)
+		mentionResources = fetchWgaMentionResources(ctx, userID, orgID, mentionNames)
 	}
 
 	// 获取 WGA Conversation 配置

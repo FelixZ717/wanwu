@@ -36,7 +36,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var resourceNameRegex = regexp.MustCompile(`@([\p{Han}a-zA-Z0-9_-]+)`)
+// wgaResourceNameRegex 用于从文本中提取 @提及 的资源名称。
+// 格式: @name，支持中文、英文字母、数字、下划线和连字符。
+// 例如: "@工具名"、"@workflow-1"、"@skill_2"
+var wgaResourceNameRegex = regexp.MustCompile(`@([\p{Han}a-zA-Z0-9_-]+)`)
 
 func GetGeneralAgentToolSelect(ctx *gin.Context, userId, orgId, agentId string) (*response.ListResult, error) {
 	toolResp, err := mcp.GetToolSelect(ctx.Request.Context(), &mcp_service.GetToolSelectReq{
@@ -1399,8 +1402,8 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	// 获取 MCP 列表
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		defer util.PrintPanicStack()
+		defer wg.Done()
 		resp, err := GetMCPSelect(ctx, userId, orgId, name)
 		if err != nil {
 			mcpErr = err
@@ -1414,8 +1417,8 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	// 获取 Workflow 列表
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		defer util.PrintPanicStack()
+		defer wg.Done()
 		resp, err := GetWorkflowSelect(ctx, userId, orgId, request.GetExplorationAppListRequest{Name: name})
 		if err != nil {
 			workflowErr = err
@@ -1429,8 +1432,8 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	// 获取 Skill 列表
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		defer util.PrintPanicStack()
+		defer wg.Done()
 		resp, err := GetSkillSelect(ctx, userId, orgId, name, constant.SkillTypeCustom)
 		if err != nil {
 			skillErr = err
@@ -1444,8 +1447,8 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	// 获取 Assistant 列表
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		defer util.PrintPanicStack()
+		defer wg.Done()
 		resp, err := GetAssistantSelect(ctx, userId, orgId, request.GetExplorationAppListRequest{Name: name})
 		if err != nil {
 			assistantErr = err
@@ -1544,7 +1547,7 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 // 格式: @资源名称 后面跟空格或消息结束
 // 支持: "@mcp1 @workflow2 请帮我处理" -> ["mcp1", "workflow2"]
 // 返回: 提取到的资源名称列表（去重后）
-func parseResourceMentions(content interface{}) []string {
+func parseWgaResourceMentions(content interface{}) []string {
 	var text string
 	switch v := content.(type) {
 	case string:
@@ -1563,7 +1566,7 @@ func parseResourceMentions(content interface{}) []string {
 	}
 
 	// 使用正则提取 @name 格式，支持中文、英文、数字、下划线、连字符
-	matches := resourceNameRegex.FindAllStringSubmatch(text, -1)
+	matches := wgaResourceNameRegex.FindAllStringSubmatch(text, -1)
 
 	// 去重
 	seen := make(map[string]bool)
@@ -1578,18 +1581,18 @@ func parseResourceMentions(content interface{}) []string {
 	return names
 }
 
-// MentionResources @提及的资源列表
-type MentionResources struct {
+// wgaMentionResources @提及的资源列表
+type wgaMentionResources struct {
 	McpList       []*assistant_service.WgaConfigMcp
 	WorkflowList  []*assistant_service.WgaConfigWorkflow
 	SkillList     []*assistant_service.WgaConfigSkill
 	AssistantList []*assistant_service.WgaConfigAssistant
 }
 
-// fetchMentionResources 获取@提及的资源列表
+// fetchWgaMentionResources 获取@提及的资源列表
 // 通过名称搜索下拉资源列表，返回各类型的资源列表
-func fetchMentionResources(ctx *gin.Context, userID, orgID string, mentionNames []string) *MentionResources {
-	result := &MentionResources{
+func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNames []string) *wgaMentionResources {
+	result := &wgaMentionResources{
 		McpList:       make([]*assistant_service.WgaConfigMcp, 0),
 		WorkflowList:  make([]*assistant_service.WgaConfigWorkflow, 0),
 		SkillList:     make([]*assistant_service.WgaConfigSkill, 0),
