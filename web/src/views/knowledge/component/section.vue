@@ -274,13 +274,13 @@
                   ].includes(permissionType)
                 "
               >
+                <span class="el-icon-price-tag icon-tag"></span>
                 <span
                   :class="['smartDate', 'tagList']"
                   @click.stop="addTag(item.labels, item.contentId)"
                   v-if="item.labels.length === 0"
                 >
-                  <span class="el-icon-price-tag icon-tag"></span>
-                  创建关键词
+                  {{ $t('keyword.create') }}
                 </span>
                 <span
                   class="tagList-item"
@@ -1399,5 +1399,16 @@ export default {
 .tooltip-content .keyword-tag {
   margin: 2px 4px 2px 0;
   color: #1a56db;
+}
+</style>
+
+<style lang="scss" scoped>
+.tagList .tagList-item {
+  padding: 2px 4px;
+  background: rgb(225, 225, 225);
+  border-radius: 10px;
+  &:hover {
+    background: $tag_bg;
+  }
 }
 </style>
