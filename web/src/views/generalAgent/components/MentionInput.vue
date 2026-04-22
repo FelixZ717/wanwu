@@ -21,23 +21,23 @@
             {{ tab.label }}
           </div>
         </div>
-
-        <!-- 列表内容 - 使用动态渲染 -->
         <div class="popover-list">
           <div
             v-for="(item, index) in currentFilteredList"
-            :key="getItemKey(item)"
+            :key="item.id || item.name"
             class="popover-item"
             :class="{ selected: index === selectedIndex }"
-            @click="selectConfigItem(item, currentType)"
+            @click="selectConfigItem(item)"
           >
             <div class="item-avatar">
-              <img v-if="item.avatar?.path" :src="avatarSrc(item.avatar.path)" />
-              <i v-else :class="currentIcon"></i>
+              <img
+                v-if="item.avatar?.path"
+                :src="avatarSrc(item.avatar.path)"
+              />
             </div>
             <div class="item-info">
               <div class="item-name">{{ item.name }}</div>
-              <div class="item-desc">{{ getItemDesc(item) }}</div>
+              <div class="item-desc">{{ item.desc }}</div>
             </div>
           </div>
           <div v-if="currentFilteredList.length === 0" class="empty-tip">
@@ -52,12 +52,7 @@
 </template>
 
 <script>
-import {
-  getGeneralAgentAssistantSelect,
-  getGeneralAgentMcpSelect,
-  getGeneralAgentSkillSelect,
-  getGeneralAgentWorkflowSelect,
-} from '@/api/generalAgent';
+import { getGeneralAgentResourceSelect } from '@/api/generalAgent';
 import { avatarSrc } from '@/utils/util';
 import XSender from 'x-sender';
 import 'x-sender/style';
@@ -82,75 +77,36 @@ export default {
     return {
       inputValue: this.value,
       showConfigPopover: false,
-      popoverTab: 'mcp', // 当前 popover 显示的 tab
-      tabs: [
-        { key: 'mcp', label: this.$t('generalAgent.config.mcp') },
-        { key: 'workflows', label: this.$t('generalAgent.config.workflows') },
-        { key: 'skills', label: this.$t('generalAgent.config.skills') },
-        { key: 'assistants', label: this.$t('generalAgent.config.agents') },
-      ],
-      mcpList: [],
-      workflowList: [],
-      skillList: [],
-      assistantList: [],
-      mentionStartPos: -1, // @ 符号的位置
-      mentionSearchText: '', // @ 后的搜索文本
-      selectedIndex: 0, // 当前选中的索引
-      sender: null, // XSender 实例
+      popoverTab: '',
+      tabs: [],
+      resourceList: {},
+      mentionStartPos: -1,
+      mentionSearchText: '',
+      selectedIndex: 0,
+      sender: null,
     };
   },
   computed: {
-    // 统一的配置项映射
-    configTypeMap() {
-      return {
-        mcp: { list: this.mcpList, keyField: 'mcpId', descField: 'description', icon: 'el-icon-connection' },
-        workflows: { list: this.workflowList, keyField: 'appId', descField: 'desc', icon: 'el-icon-share' },
-        skills: { list: this.skillList, keyField: 'skillId', descField: 'desc', icon: 'el-icon-document' },
-        assistants: { list: this.assistantList, keyField: 'appId', descField: 'desc', icon: 'el-icon-user' },
-      };
+    availableResourceTypes() {
+      return Object.keys(this.resourceList).filter(
+        type => this.resourceList[type] && this.resourceList[type].length > 0,
+      );
     },
 
-    // 当前类型配置
     currentConfig() {
-      return this.configTypeMap[this.popoverTab] || {};
-    },
+      const type = this.popoverTab;
+      if (!type || !this.resourceList[type]) {
+        return {};
+      }
 
-    // 当前过滤后的列表
-    currentFilteredList() {
-      const { list, descField } = this.currentConfig;
-      return this.filterList(list || [], descField);
-    },
-
-    // 当前类型
-    currentType() {
-      const typeMap = {
-        mcp: 'mcp',
-        workflows: 'workflow',
-        skills: 'skill',
-        assistants: 'assistant',
+      return {
+        list: this.resourceList[type],
       };
-      return typeMap[this.popoverTab];
     },
 
-    // 当前图标
-    currentIcon() {
-      return this.currentConfig.icon || 'el-icon-document';
-    },
-
-    filteredMcpList() {
-      return this.filterList(this.mcpList, 'description');
-    },
-
-    filteredWorkflowList() {
-      return this.filterList(this.workflowList, 'desc');
-    },
-
-    filteredSkillList() {
-      return this.filterList(this.skillList, 'desc');
-    },
-
-    filteredAssistantList() {
-      return this.filterList(this.assistantList, 'desc');
+    currentFilteredList() {
+      const { list } = this.currentConfig;
+      return this.filterList(list || []);
     },
   },
   watch: {
@@ -170,12 +126,28 @@ export default {
         });
       }
     },
+    availableResourceTypes(newVal) {
+      if (newVal.length > 0 && this.tabs.length === 0) {
+        this.initTabs();
+      }
+    },
   },
   methods: {
     avatarSrc,
 
+    initTabs() {
+      this.tabs = this.availableResourceTypes.map(type => ({
+        key: type,
+        label: this.$t(`generalAgent.config.${type}`),
+      }));
+
+      if (this.tabs.length > 0 && !this.popoverTab) {
+        this.popoverTab = this.tabs[0].key;
+      }
+    },
+
     // 通用的列表过滤方法
-    filterList(list, descField) {
+    filterList(list) {
       if (!this.mentionSearchText) {
         return list;
       }
@@ -183,20 +155,8 @@ export default {
       return list.filter(
         item =>
           item.name?.toLowerCase().includes(searchText) ||
-          item[descField]?.toLowerCase().includes(searchText),
+          item.desc?.toLowerCase().includes(searchText),
       );
-    },
-
-    // 获取列表项的 key
-    getItemKey(item) {
-      const { keyField } = this.currentConfig;
-      return item[keyField] || item.name;
-    },
-
-    // 获取列表项的描述
-    getItemDesc(item) {
-      const { descField } = this.currentConfig;
-      return item[descField];
     },
 
     initSender() {
@@ -207,11 +167,8 @@ export default {
           disabled: this.disabled,
         });
 
-        // 使用 XSender 官方事件总线监听内容变化（包括输入和删除）
         const { EVENT_COMMON_CHANGE } = XSender.EventSet;
-        const busKey = 'XSender';
-
-        this.sender.bus.on(busKey, EVENT_COMMON_CHANGE, () => {
+        this.sender.bus.on('XSender', EVENT_COMMON_CHANGE, () => {
           this.inputValue = this.sender.getText();
           if (this.showConfigPopover) {
             this.updateMentionSearch();
@@ -242,7 +199,6 @@ export default {
       }
     },
 
-    // 重置提及搜索状态
     resetMentionState() {
       this.showConfigPopover = false;
       this.mentionStartPos = -1;
@@ -308,7 +264,10 @@ export default {
 
       if (lastAtIndex !== -1) {
         this.mentionStartPos = lastAtIndex;
-        this.mentionSearchText = this.inputValue.substring(lastAtIndex + 1, cursorPos);
+        this.mentionSearchText = this.inputValue.substring(
+          lastAtIndex + 1,
+          cursorPos,
+        );
 
         this.$nextTick(() => {
           this.$refs.configPopover?.updatePopper();
@@ -330,58 +289,52 @@ export default {
 
     async fetchConfigData() {
       try {
-        const [mcpRes, workflowRes, skillRes, assistantRes] =
-          await Promise.allSettled([
-            getGeneralAgentMcpSelect(),
-            getGeneralAgentWorkflowSelect(),
-            getGeneralAgentSkillSelect(),
-            getGeneralAgentAssistantSelect(),
-          ]);
+        const res = await getGeneralAgentResourceSelect();
 
-        // 统一处理响应数据
-        const handleResponse = (res, targetProp) => {
-          if (res.status === 'fulfilled' && res.value?.data?.list) {
-            this[targetProp] = res.value.data.list;
-          }
-        };
+        if (res?.data && Array.isArray(res.data)) {
+          this.resourceList = {};
 
-        handleResponse(mcpRes, 'mcpList');
-        handleResponse(workflowRes, 'workflowList');
-        handleResponse(skillRes, 'skillList');
-        handleResponse(assistantRes, 'assistantList');
+          res.data.forEach(item => {
+            const { listType, list } = item;
+            if (listType && Array.isArray(list)) {
+              this.resourceList[listType] = list;
+            }
+          });
+        }
       } catch (error) {
         console.error('获取配置数据失败:', error);
       }
     },
 
-    getCurrentList() {
-      const typeMap = {
-        mcp: this.filteredMcpList,
-        workflows: this.filteredWorkflowList,
-        skills: this.filteredSkillList,
-        assistants: this.filteredAssistantList,
-      };
-      return typeMap[this.popoverTab] || [];
-    },
-
-    handleTabSwitch(key) {
-      const tabs = ['mcp', 'workflows', 'skills', 'assistants'];
-      const currentIndex = tabs.indexOf(this.popoverTab);
-      const delta = key === 'ArrowLeft' ? -1 : 1;
-      const newIndex = (currentIndex + delta + tabs.length) % tabs.length;
-      this.popoverTab = tabs[newIndex];
+    selectCurrentItem() {
+      if (this.currentFilteredList.length === 0 || this.selectedIndex < 0)
+        return;
+      this.selectConfigItem(this.currentFilteredList[this.selectedIndex]);
     },
 
     handleKeyboardNavigation(key) {
-      const currentList = this.getCurrentList();
-      if (currentList.length === 0) return;
+      if (this.currentFilteredList.length === 0) return;
 
       const delta = key === 'ArrowUp' ? -1 : 1;
-      this.selectedIndex = (this.selectedIndex + delta + currentList.length) % currentList.length;
+      this.selectedIndex =
+        (this.selectedIndex + delta + this.currentFilteredList.length) %
+        this.currentFilteredList.length;
 
       this.$nextTick(() => {
         this.scrollToSelected();
       });
+    },
+
+    handleTabSwitch(key) {
+      if (this.tabs.length === 0) return;
+
+      const currentIndex = this.tabs.findIndex(
+        tab => tab.key === this.popoverTab,
+      );
+      const delta = key === 'ArrowLeft' ? -1 : 1;
+      const newIndex =
+        (currentIndex + delta + this.tabs.length) % this.tabs.length;
+      this.popoverTab = this.tabs[newIndex].key;
     },
 
     scrollToSelected() {
@@ -391,58 +344,24 @@ export default {
       }
     },
 
-    selectCurrentItem() {
-      const currentList = this.getCurrentList();
-      if (currentList.length === 0 || this.selectedIndex < 0) return;
-
-      const typeMap = {
-        mcp: 'mcp',
-        workflows: 'workflow',
-        skills: 'skill',
-        assistants: 'assistant',
-      };
-
-      this.selectConfigItem(currentList[this.selectedIndex], typeMap[this.popoverTab]);
-    },
-
-    selectConfigItem(item, type) {
+    selectConfigItem(item) {
       if (!this.inputValue || this.mentionStartPos === -1) return;
 
-      // 删除 @ 和搜索文本
       this.sender.backspace(-(this.mentionSearchText.length + 1));
 
-      // 插入提及项
       this.sender.setMention({
-        id: item.mcpId || item.appId || item.skillId,
-        name: item.name,
-        type,
+        id: item.id,
+        name: item.name + ' ', // @Amap-高德地图 帮我查询一下西安钟楼到大雁塔的骑行路线
+        type: this.popoverTab,
       });
 
-      // 重置状态并聚焦
       this.resetMentionState();
       this.$nextTick(() => {
         this.sender?.focus();
       });
 
-      // 更新输入值
       this.inputValue = this.sender.getText();
       this.$emit('input', this.inputValue);
-    },
-
-    async loadData() {
-      await this.fetchConfigData();
-    },
-
-    focus() {
-      if (this.sender) {
-        this.sender.focus();
-      }
-    },
-
-    blur() {
-      if (this.sender) {
-        this.sender.blur();
-      }
     },
 
     clear() {
@@ -454,7 +373,7 @@ export default {
     },
   },
   mounted() {
-    this.loadData();
+    this.fetchConfigData();
     this.initSender();
   },
   beforeDestroy() {
@@ -467,6 +386,11 @@ export default {
 </script>
 
 <style lang="scss">
+.x-sender-container * {
+  font-size: 16px !important;
+  font-style: normal;
+}
+
 .config-popover {
   padding: 0 !important;
   width: 400px;
