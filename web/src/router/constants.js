@@ -5,6 +5,10 @@ export const PERMS = {
   PERMISSION_ROLE: 'permission.role', // 权限管理-角色管理
   SETTING: 'setting', // 平台配置
 
+  WGA: 'wga', // 通用智能体
+  WGA_WANWU_BOT: 'wga.wanwu_bot', // 通用智能体-WanwuBot
+  WGA_OPENCLAW: 'wga.openclaw', // 通用智能体-OpenClaw
+
   MODEL_SERVICE: 'model', // 模型服务
   MODEL_MANAGE: 'model.model_management', // 模型服务-模型管理
 

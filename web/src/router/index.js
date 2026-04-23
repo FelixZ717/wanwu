@@ -95,6 +95,7 @@ const constantRoutes = [
       {
         path: '/aiAssistant',
         component: resolve => require(['@/views/aiAssistant/index'], resolve),
+        meta: { perm: [PERMS.WGA_OPENCLAW] },
       },
       {
         path: '/modelAccess',
@@ -123,11 +124,6 @@ const constantRoutes = [
         path: '/skill/create',
         component: resolve =>
           require(['@/views/templateSquare/skills/custom/create.vue'], resolve),
-        meta: { perm: [PERMS.SKILL] },
-      },
-      {
-        path: '/wga',
-        component: resolve => require(['@/views/generalAgent'], resolve),
         meta: { perm: [PERMS.SKILL] },
       },
       {
@@ -316,7 +312,7 @@ const constantRoutes = [
         path: '/generalAgent',
         component: resolve =>
           require(['@/views/generalAgent/index.vue'], resolve),
-        meta: { perm: [PERMS.AGENT] },
+        meta: { perm: [PERMS.WGA_WANWU_BOT] },
       },
       {
         path: '/workflow/publishSet',
