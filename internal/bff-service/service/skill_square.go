@@ -93,12 +93,39 @@ func ShareSquareSkill(ctx *gin.Context, userId, orgId, skillId string) error {
 }
 
 // GetSquareSkillDetail 探索广场-skill详情
-func GetSquareSkillDetail(ctx *gin.Context, skillId string) (*response.SkillDetail, error) {
+func GetSquareSkillDetail(ctx *gin.Context, userId, orgId, skillId string) (*response.SquareSkillDetailInfo, error) {
 	skillsCfg, exist := config.Cfg().AgentSkill(skillId)
 	if !exist {
 		return nil, grpc_util.ErrorStatus(errs.Code_BFFGeneral, "skill_not_found", "skill not found in builtin skills")
 	}
-	return buildSkillTempDetail(skillsCfg, true), nil
+
+	// 查询当前用户是否已添加该skill
+	isShared := false
+	joinerResp, err := mcp.AcquiredSkillGetList(ctx.Request.Context(), &mcp_service.AcquiredSkillGetListReq{
+		Identity: &mcp_service.Identity{UserId: userId, OrgId: orgId},
+	})
+	if err == nil && joinerResp != nil {
+		for _, skill := range joinerResp.List {
+			if skill.SquareSkillId == skillId {
+				isShared = true
+				break
+			}
+		}
+	}
+
+	iconUrl := config.Cfg().DefaultIcon.SkillIcon
+	if skillsCfg.Avatar != "" {
+		iconUrl = skillsCfg.Avatar
+	}
+	return &response.SquareSkillDetailInfo{
+		SkillId:       skillsCfg.SkillId,
+		Name:          skillsCfg.Name,
+		Avatar:        request.Avatar{Path: iconUrl},
+		Author:        skillsCfg.Author,
+		Desc:          skillsCfg.Desc,
+		SkillMarkdown: string(skillsCfg.SkillMarkdown),
+		IsShared:      isShared,
+	}, nil
 }
 
 // DownloadSquareSkill 探索广场-下载skill

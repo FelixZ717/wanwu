@@ -12,13 +12,3 @@ type JoinerSkillDetail struct {
 	SkillMarkdown string         `json:"skillMarkdown"`
 	DownloadUrl   string         `json:"downloadUrl"`
 }
-
-// SquareSkillDetail 探索广场-skill列表项
-type SquareSkillDetail struct {
-	SkillId  string         `json:"skillId"`
-	Name     string         `json:"name"`
-	Avatar   request.Avatar `json:"avatar"`
-	Author   string         `json:"author"`
-	Desc     string         `json:"desc"`
-	IsShared bool           `json:"isShared"`
-}

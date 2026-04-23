@@ -59,7 +59,7 @@ func ShareSquareSkill(ctx *gin.Context) {
 //	@Success		200		{object}	response.Response{data=response.SkillDetail}
 //	@Router			/square/skills/detail [get]
 func GetSquareSkillDetail(ctx *gin.Context) {
-	resp, err := service.GetSquareSkillDetail(ctx, ctx.Query("skillId"))
+	resp, err := service.GetSquareSkillDetail(ctx, getUserID(ctx), getOrgID(ctx), ctx.Query("skillId"))
 	gin_util.Response(ctx, resp, err)
 }
 
