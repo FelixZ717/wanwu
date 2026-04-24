@@ -117,6 +117,7 @@ export default {
     noData: '暂无匹配内容',
   },
   common: {
+    all: '全部',
     create: '+创建',
     fileUpload: {
       fileSizeError: '文件大小不能为空',
@@ -198,6 +199,7 @@ export default {
     },
     input: {
       placeholder: '请输入',
+      searchPlaceholder: '请输入搜索内容',
       inputDesc: '请输入描述',
       modelChatPlaceholder1: '请输入内容,用Ctrl+Enter可换行',
       modelChatPlaceholder2: '请输入内容，输入“/”获取模板，用Ctrl+Enter可换行',
@@ -2151,9 +2153,9 @@ export default {
       title: '配置',
       tools: '工具',
       mcp: 'MCP',
-      workflows: '工作流',
-      skills: 'Skills',
-      agents: '智能体',
+      workflow: '工作流',
+      skill: 'Skills',
+      assistant: '智能体',
       validationError: '⚠️ 不满足选择条件',
       needApiKey: '需要配置 API Key',
       apiKeyTitle: '请输入 API Key',
