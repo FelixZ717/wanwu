@@ -105,6 +105,7 @@ export default {
     about: '关于',
     helpDoc: '帮助文档',
     back: '返回',
+    skillSquare: 'Skill广场',
   },
   header: {
     title: '智能体平台',
@@ -322,6 +323,18 @@ export default {
     private: '私密',
     multiAgent: '多智能体',
     singleAgent: '单智能体',
+  },
+  skillSpace: {
+    search: '按照skill名称搜索',
+    toResource: '发送到资源库',
+    isShared: '已发送到资源库',
+    list: {
+      moreText: '点击发现更多Skills',
+    },
+    detail: {
+      backText: '返回Skill广场',
+      otherSkill: '其他Skill查看',
+    },
   },
   uploadDialog: {
     title: '文件上传',
@@ -704,14 +717,14 @@ export default {
     skills: {
       name: 'skill',
       app: {
-        builtIn: '内置',
-        custom: '自定义',
+        myAdded: '我添加的',
+        myCreated: '我创建的',
         addText: '创建自定义Skills',
         moreText: '点击发现更多Skills',
       },
       createSlogan: '一句话创建Skills',
       createPlaceholder: '选择一款模型，告诉我想要生成什么Skill吧',
-      sendCustom: '发送到资源库',
+      save: '保存',
       noModelIdTips: '请选择一个模型',
       deleteHint:
         '删除后，历史引用了本skills的智能体将自动取消引用，且此操作不可撤回,确定要删除吗？',
@@ -1237,6 +1250,9 @@ export default {
       exporting: '导出中',
       finished: '导出成功',
       failed: '导出失败',
+    },
+    searchInfo: {
+      noParams: '没有可用参数',
     },
   },
   knowledgeSelect: {
@@ -1806,6 +1822,21 @@ export default {
       apiRootUrl: 'API根地址',
       apiKey: 'API密钥',
     },
+    step: {
+      qaSearch: 'QA Search',
+      knowledgeSearch: 'Knowledge Search',
+      thinking: 'Thinking',
+      running: 'Running',
+      completed: 'Completed',
+      noHit: 'No matching content',
+    },
+    answerFailed: 'Answer failed',
+    citation: {
+      source: 'Source',
+      viewSource: 'Click to view source →',
+      close: 'Close',
+      openInNewTab: 'Open in new tab',
+    },
   },
   app: {
     modelTips: '暂不支持选择图文问答类模型',
@@ -1915,13 +1946,17 @@ export default {
     },
     error: {
       modelListLoading: 'Model list is loading, please try again later',
-      createFailed: 'Failed to create conversation: no conversation ID returned',
+      createFailed:
+        'Failed to create conversation: no conversation ID returned',
       createError: 'Failed to create conversation',
-      conversationIdNotExist: 'Conversation ID does not exist, please refresh the page and try again',
-      createConversationFailed: 'Failed to create conversation, please try again',
+      conversationIdNotExist:
+        'Conversation ID does not exist, please refresh the page and try again',
+      createConversationFailed:
+        'Failed to create conversation, please try again',
       chatRequestFailed: 'Chat request failed',
       sendMessageFailed: 'Failed to send message: ',
-      modelNotAvailable: 'The selected model is currently unavailable, please switch to another model',
+      modelNotAvailable:
+        'The selected model is currently unavailable, please switch to another model',
     },
     activityBlock: {
       steps: 'steps',

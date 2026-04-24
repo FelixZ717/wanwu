@@ -3,7 +3,7 @@
     <div class="page-title">
       <i
         class="el-icon-arrow-left"
-        @click="goBack('/knowledge')"
+        @click="goTo('/knowledge')"
         style="margin-right: 10px; font-size: 20px; cursor: pointer"
       ></i>
       {{ knowledgeName }}
@@ -25,20 +25,6 @@
           <el-container>
             <el-header class="classifyTitle">
               <div class="searchInfo">
-                <el-select
-                  @change="changeOption($event)"
-                  v-model="docQuery.status"
-                  :placeholder="$t('knowledgeManage.please')"
-                  style="width: 150px"
-                  class="marginRight no-border-select cover-input-icon"
-                >
-                  <el-option
-                    v-for="item in knowLegOptions"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </el-select>
                 <search-input
                   class="cover-input-icon"
                   :placeholder="$t('knowledgeManage.questionPlaceholder')"
@@ -195,10 +181,17 @@
                     ></el-switch>
                   </template>
                 </el-table-column>
-                <el-table-column
-                  prop="status"
-                  :label="$t('knowledgeManage.importStatus')"
-                >
+                <el-table-column prop="status" width="150">
+                  <template #header>
+                    <div style="display: flex; align-items: center">
+                      <span>{{ $t('knowledgeManage.importStatus') }}</span>
+                      <FilterPopover
+                        style="margin-left: 5px"
+                        :options="knowLegOptions"
+                        @applyFilter="filterCurrentStatus"
+                      />
+                    </div>
+                  </template>
                   <template slot-scope="scope">
                     <span>
                       {{
@@ -359,6 +352,7 @@ import SearchInput from '@/components/searchInput.vue';
 import mataData from '../component/metadata.vue';
 import batchMetaData from '../component/meta/batchMetaData.vue';
 import BatchMetaButton from '../component/meta/batchMetaButton.vue';
+import FilterPopover from '@/components/filterPopover.vue';
 import createQa from './createQa.vue';
 import fileUpload from './fileUpload.vue';
 import exportRecord from './exportRecord.vue';
@@ -389,7 +383,7 @@ import {
   QA_STATUS_PROCESSING,
 } from '@/views/knowledge/constants';
 import CopyIcon from '@/components/copyIcon.vue';
-import { goBack } from '@/utils/util';
+import { goTo } from '@/utils/util';
 
 export default {
   components: {
@@ -399,6 +393,7 @@ export default {
     mataData,
     batchMetaData,
     BatchMetaButton,
+    FilterPopover,
     createQa,
     fileUpload,
     exportRecord,
@@ -415,7 +410,7 @@ export default {
         name: '',
         metaValue: '',
         knowledgeId: this.$route.params.id,
-        status: ALL,
+        status: [ALL],
       },
       fileList: [],
       listApi: getQaPairList,
@@ -671,7 +666,7 @@ export default {
         this.timer = null;
       }
     },
-    goBack,
+    goTo,
     reload() {
       this.getTableData(this.docQuery);
     },
@@ -750,11 +745,6 @@ export default {
         }
       });
     },
-    changeOption(data) {
-      this.docQuery.status = data;
-      this.getTableData({ ...this.docQuery, pageNo: 1 });
-    },
-
     handleEdit(row) {
       this.$refs.createQa.showDialog(row);
     },
@@ -766,6 +756,10 @@ export default {
       if (tableInfo && tableInfo.qaKnowledgeInfo) {
         this.knowledgeName = tableInfo.qaKnowledgeInfo.knowledgeName;
       }
+    },
+    filterCurrentStatus(data) {
+      this.docQuery.status = data;
+      this.getTableData({ ...this.docQuery, pageNo: 1 });
     },
   },
 };

@@ -105,6 +105,7 @@ export default {
     about: '关于',
     helpDoc: '帮助文档',
     back: '返回',
+    skillSquare: 'Skill广场',
   },
   header: {
     title: '智能体平台',
@@ -117,6 +118,7 @@ export default {
     noData: '暂无匹配内容',
   },
   common: {
+    all: '全部',
     create: '+创建',
     fileUpload: {
       fileSizeError: '文件大小不能为空',
@@ -198,6 +200,7 @@ export default {
     },
     input: {
       placeholder: '请输入',
+      searchPlaceholder: '请输入搜索内容',
       inputDesc: '请输入描述',
       modelChatPlaceholder1: '请输入内容,用Ctrl+Enter可换行',
       modelChatPlaceholder2: '请输入内容，输入“/”获取模板，用Ctrl+Enter可换行',
@@ -339,6 +342,18 @@ export default {
     private: '私密',
     multiAgent: '多智能体',
     singleAgent: '单智能体',
+  },
+  skillSpace: {
+    search: '按照skill名称搜索',
+    toResource: '发送到资源库',
+    isShared: '已发送到资源库',
+    list: {
+      moreText: '点击发现更多Skills',
+    },
+    detail: {
+      backText: '返回Skill广场',
+      otherSkill: '其他Skill查看',
+    },
   },
   uploadDialog: {
     title: '文件上传',
@@ -723,14 +738,14 @@ export default {
     skills: {
       name: 'skill',
       app: {
-        builtIn: '内置',
-        custom: '自定义',
+        myAdded: '我添加的',
+        myCreated: '我创建的',
         addText: '创建自定义Skills',
         moreText: '点击发现更多Skills',
       },
       createSlogan: '一句话创建Skills',
       createPlaceholder: '选择一款模型，告诉我想要生成什么Skill吧',
-      sendCustom: '发送到资源库',
+      save: '保存',
       noModelIdTips: '请选择一个模型',
       deleteHint:
         '删除后，历史引用了本skills的智能体将自动取消引用，且此操作不可撤回,确定要删除吗？',
@@ -1364,6 +1379,9 @@ export default {
         admin: '管理员',
       },
       warning: '请先选择组织',
+    },
+    searchInfo: {
+      noParams: '没有可用参数',
     },
   },
   knowledgeSelect: {
@@ -2005,6 +2023,21 @@ export default {
       apiKey: 'API密钥',
       viewApiKey: '查看API文档',
     },
+    step: {
+      qaSearch: '问答库检索',
+      knowledgeSearch: '知识库检索',
+      thinking: '深度思考',
+      running: '运行中',
+      completed: '运行完毕',
+      noHit: '未命中相关内容',
+    },
+    answerFailed: '回答失败',
+    citation: {
+      source: '来源',
+      viewSource: '点击查看来源 →',
+      close: '关闭',
+      openInNewTab: '在新窗口打开',
+    },
   },
   app: {
     modelTips: '暂不支持选择图文问答类模型',
@@ -2097,7 +2130,7 @@ export default {
       config: '配置',
       uploadFile: '上传文件',
       footer: '通用智能体 · 内容由 AI 生成，仅供参考',
-      placeholder: '选择一款模型，和我对话吧',
+      placeholder: '选择一款模型，和我对话吧。可以试试@，快捷调用工具',
     },
     message: {
       reasoning: '【思考过程】\n',
@@ -2148,9 +2181,9 @@ export default {
       title: '配置',
       tools: '工具',
       mcp: 'MCP',
-      workflows: '工作流',
-      skills: 'Skills',
-      agents: '智能体',
+      workflow: '工作流',
+      skill: 'Skills',
+      assistant: '智能体',
       validationError: '⚠️ 不满足选择条件',
       needApiKey: '需要配置 API Key',
       apiKeyTitle: '请输入 API Key',

@@ -3,7 +3,7 @@
     <div class="page-title">
       <i
         class="el-icon-arrow-left"
-        @click="goBack('/knowledge')"
+        @click="goTo('/knowledge')"
         style="margin-right: 10px; font-size: 20px; cursor: pointer"
       ></i>
       {{ knowledgeName }}
@@ -460,7 +460,7 @@ import {
   exportDoc,
   docReImport,
 } from '@/api/knowledge';
-import { goBack } from '@/utils/util';
+import { goTo } from '@/utils/util';
 import { mapGetters } from 'vuex';
 import {
   DROPDOWN_GROUPS,
@@ -794,7 +794,7 @@ export default {
         this.timer = null;
       }
     },
-    goBack,
+    goTo,
     reload() {
       this.getTableData(this.docQuery);
     },
@@ -981,6 +981,7 @@ export default {
           name: row.docName,
           knowledgeId: row.knowledgeId,
           knowledgeName: this.knowledgeName,
+          category: this.category,
           disable: [
             KNOWLEDGE_STATUS_PENDING_PROCESSING,
             KNOWLEDGE_STATUS_ANALYSING,

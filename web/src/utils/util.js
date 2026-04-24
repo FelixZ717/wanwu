@@ -102,7 +102,7 @@ export const replaceIcon = logoPath => {
     document.createElement('link');
   link.type = 'image/x-icon';
   link.rel = 'shortcut icon';
-  link.href = logoPath ? avatarSrc(logoPath) : basePath + '/aibase/favicon.ico';
+  link.href = avatarSrc(logoPath, basePath + '/aibase/favicon.ico');
   document.getElementsByTagName('head')[0].appendChild(link);
 };
 
@@ -196,9 +196,38 @@ export function isSub(data) {
 }
 
 export function parseSub(data, index, searchList) {
+  // 标点吸附：汉字与引用之间、引用与中文/英文标点之间的空白全部压掉，
+  // 避免出现 "水平 【1^】 。它..." 这种被空格割裂的阅读节奏
+  data = data
+    .replace(/([\u4e00-\u9fa5A-Za-z0-9])\s+(?=【\d{0,2}\^】)/g, '$1')
+    .replace(/【(\d{0,2})\^】\s+(?=[，。！？；：、）】》」"'])/g, '【$1^】');
+  const escape = s =>
+    String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   return data.replace(/\【([0-9]{0,2})\^\】/g, item => {
-    let result = item.match(/\【([0-9]{0,2})\^\】/)[1];
-    return `<sup class='citation' data-parents-index='${index}'>${result}</sup>`;
+    const num = item.match(/\【([0-9]{0,2})\^\】/)[1];
+    // 如提供 searchList，则附上 title / snippet 供前端 hover 气泡读取
+    if (Array.isArray(searchList) && searchList.length) {
+      const src = searchList[Number(num) - 1];
+      if (src) {
+        const title = escape(src.title || src.file_name || '');
+        const rawSnippet = String(src.snippet || src.content || '');
+        // 去掉原文里的 markdown 图片/链接 + HTML 标签，气泡里只展示纯文本
+        const cleaned = rawSnippet
+          .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+          .replace(/<\/?[a-zA-Z][^>]*>/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const snippet = escape(
+          cleaned.length > 120 ? cleaned.slice(0, 120) + '…' : cleaned,
+        );
+        return `<sup class='citation' data-parents-index='${index}' data-title="${title}" data-snippet="${snippet}">${num}</sup>`;
+      }
+    }
+    return `<sup class='citation' data-parents-index='${index}'>${num}</sup>`;
   });
   /*if (!searchList || !Array.isArray(searchList)) {
     searchList = [];
@@ -298,11 +327,10 @@ export const formatTools = tools => {
 
 /**
  * 格式化得分，保留5位小数
- * @param {number|string} score - 得分值
+ * @param {number} score - 得分值
  * @returns {string} 格式化后的得分字符串
  */
 export function formatScore(score) {
-  // 格式化得分，保留5位小数
   if (typeof score !== 'number') {
     return '0.00000';
   }
@@ -551,21 +579,12 @@ export function Img2Md(htmlString, escapeHtml = true) {
   return result;
 }
 
-export function goBack(path = '') {
-  // 检查上一个页面是否来自同一个域名
-  const currentDomain = window.location.origin;
-  const referrer = document.referrer;
-
-  // 如果有可回退页面并且referrer来自同一域名，则可以返回
-  if (
-    window.history.length > 1 &&
-    referrer &&
-    referrer.startsWith(currentDomain)
-  ) {
+export function goTo(path = '', back = false) {
+  if (back) {
     router.back();
   } else if (path) {
     router.push({ path: path });
-  }
+  } else router.back();
 }
 
 // 直链下载

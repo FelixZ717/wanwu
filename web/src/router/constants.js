@@ -5,6 +5,10 @@ export const PERMS = {
   PERMISSION_ROLE: 'permission.role', // 权限管理-角色管理
   SETTING: 'setting', // 平台配置
 
+  WGA: 'wga', // 通用智能体
+  WGA_WANWU_BOT: 'wga.wanwu_bot', // 通用智能体-WanwuBot
+  WGA_OPENCLAW: 'wga.openclaw', // 通用智能体-OpenClaw
+
   MODEL_SERVICE: 'model', // 模型服务
   MODEL_MANAGE: 'model.model_management', // 模型服务-模型管理
 
@@ -25,6 +29,7 @@ export const PERMS = {
   EXPLORE: 'exploration.app', // 探索广场-应用广场
   MCP: 'exploration.mcp', // 探索广场-MCP广场
   TEMPLATE: 'exploration.template', // 探索广场-模板广场
+  SKILL_SQUARE: 'exploration.skill', // 探索广场-Skill广场
 
   OPERATION: 'operation', // 运营管理
   STATISTIC: 'operation.statistic_client', // 运营管理-统计分析
