@@ -1174,6 +1174,7 @@ export default {
       failed: '处理失败',
       graphStatus: '图谱解析状态',
       useGraph: '是否使用图谱',
+      graphModel: '知识图谱解析模型',
       successGraphTips:
         '若schema文件内容与上传的文档内容无法匹配，则知识图谱无法解析出内容',
     },
