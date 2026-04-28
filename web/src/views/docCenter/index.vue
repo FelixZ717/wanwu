@@ -4,7 +4,7 @@
       <div class="doc-header__left">
         <img
           v-if="homeLogoPath"
-          style="height: 50px"
+          style="max-height: 50px; max-width: 200px"
           :src="avatarSrc(homeLogoPath)"
         />
         <span v-if="homeTitle">
@@ -377,7 +377,7 @@ export default {
   }
 }
 .doc-header {
-  padding: 20px 50px;
+  padding: 20px 60px;
   display: flex;
   align-items: center;
   width: 100%;
