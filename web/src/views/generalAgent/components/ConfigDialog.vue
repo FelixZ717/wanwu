@@ -284,8 +284,8 @@ export default {
       await Promise.allSettled([
         this.fetchToolList(),
         this.fetchResourceList(),
-        this.fetchGlobalConfig(),
       ]);
+      await this.fetchGlobalConfig();
       this.selectFirstAvailableTab();
     },
     // 自动选择第一个有数据的tab
@@ -320,8 +320,7 @@ export default {
       const res = await getGeneralAgentResourceSelect();
       if (res?.data && Array.isArray(res.data)) {
         this.resourceList = {};
-        this.selectedResources = {};
-
+        const newSelectedResources = {};
         res.data.forEach(item => {
           const { listType, list } = item;
           if (listType && Array.isArray(list)) {
@@ -329,27 +328,36 @@ export default {
               ...resource,
               resourceType: listType,
             }));
-            this.selectedResources[listType] = [];
+            newSelectedResources[listType] = [];
           }
         });
+        this.selectedResources = newSelectedResources;
       }
     },
     async fetchGlobalConfig() {
       const res = await getGeneralAgentGlobalConfig();
-      if (res.data) {
-        this.selectedTools = (res.data.toolList || []).map(tool => ({
-          toolId: tool.toolId,
-          toolType: tool.toolType,
-        }));
-
+      if (res.data && Array.isArray(res.data)) {
+        this.selectedTools = [];
+        const newSelectedResources = {};
         Object.keys(this.resourceList).forEach(type => {
-          const listKey = `${type}List`;
-          this.selectedResources[type] = (res.data[listKey] || []).map(
-            item => ({
-              id: item.id,
-            }),
-          );
+          newSelectedResources[type] = [];
         });
+
+        res.data.forEach(item => {
+          const { list, listType } = item;
+          if (listType === 'tool') {
+            this.selectedTools = (list || []).map(tool => ({
+              toolId: tool.toolId,
+              toolType: tool.toolType,
+            }));
+          } else if (listType && this.resourceList[listType]) {
+            newSelectedResources[listType] = (list || []).map(resource => ({
+              id: resource.id,
+              type: resource.type,
+            }));
+          }
+        });
+        this.selectedResources = newSelectedResources;
       }
     },
     handleClose() {
@@ -426,23 +434,34 @@ export default {
       const selectedResourcesMap = {};
       Object.keys(this.resourceList).forEach(type => {
         const selectedList = [];
-        this.resourceList[type].forEach(item => {
-          if (this.isItemSelected(item.id, type)) {
+        this.resourceList[type].forEach(resource => {
+          if (this.isItemSelected(resource.id, type)) {
             selectedList.push({
-              id: item.id,
+              id: resource.id,
+              type: resource.type,
             });
           }
         });
         selectedResourcesMap[type] = selectedList;
       });
 
-      const submitData = {
-        toolList: allSelectedTools,
-        mcpList: selectedResourcesMap.mcp || [],
-        workflowList: selectedResourcesMap.workflow || [],
-        skillList: selectedResourcesMap.skill || [],
-        assistantList: selectedResourcesMap.assistant || [],
-      };
+      const submitData = {};
+
+      if (allSelectedTools.length > 0) {
+        submitData.tool = allSelectedTools.map(tool => ({
+          toolId: tool.toolId,
+          toolType: tool.toolType,
+        }));
+      }
+
+      Object.keys(selectedResourcesMap).forEach(type => {
+        if (selectedResourcesMap[type].length > 0) {
+          submitData[type] = selectedResourcesMap[type].map(resource => ({
+            id: resource.id,
+            type: resource.type,
+          }));
+        }
+      });
 
       const res = await updateGeneralAgentGlobalConfig(submitData);
 
@@ -538,14 +557,21 @@ export default {
     handleToggleResource(item, resourceType) {
       const itemId = item.id;
       const selectedList = this.selectedResources[resourceType];
-
       const index = selectedList.findIndex(r => r.id === itemId);
+
       if (index > -1) {
-        selectedList.splice(index, 1);
+        const newList = [...selectedList];
+        newList.splice(index, 1);
+        this.$set(this.selectedResources, resourceType, newList);
       } else {
-        selectedList.push({
-          id: itemId,
-        });
+        const newList = [
+          ...selectedList,
+          {
+            id: itemId,
+            type: item.type,
+          },
+        ];
+        this.$set(this.selectedResources, resourceType, newList);
       }
     },
 
@@ -813,7 +839,6 @@ export default {
     }
   }
 }
-
 
 .api-key-dialog {
   .el-dialog__body {
