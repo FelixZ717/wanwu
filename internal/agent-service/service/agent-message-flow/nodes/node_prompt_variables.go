@@ -69,7 +69,8 @@ func buildHistory(history []request.AssistantConversionHistory, maxHistory int) 
 
 	// 处理所有历史记录
 	for _, conversionHistory := range history {
-		historyList = append(historyList, schema.UserMessage(conversionHistory.Query))
+		query := buildUrlInput(conversionHistory.Query, conversionHistory.UploadFileUrl)
+		historyList = append(historyList, schema.UserMessage(query))
 		if len(conversionHistory.Response) == 0 {
 			continue
 		}
@@ -103,7 +104,7 @@ func buildUserInput(reqContext *request.AgentChatContext) ([]*schema.Message, er
 			}
 			parts = append(parts, *message)
 		}
-		input += "\n用户上传的文档连接为:" + rebuildUlr(req.UploadFile[0])
+		input = buildUrlInput(input, req.UploadFile)
 		parts = append(parts, schema.MessageInputPart{
 			Type: schema.ChatMessagePartTypeText,
 			Text: input,
@@ -113,12 +114,19 @@ func buildUserInput(reqContext *request.AgentChatContext) ([]*schema.Message, er
 			UserInputMultiContent: parts,
 		})
 	} else if agentChatInfo.UploadUrl { //非视觉模型，传了url
-		input += "\n用户上传的文档连接为:" + rebuildUlr(req.UploadFile[0])
+		input += buildUrlInput(input, req.UploadFile)
 		messages = append(messages, schema.UserMessage(input))
 	} else {
 		messages = append(messages, schema.UserMessage(input))
 	}
 	return messages, nil
+}
+
+func buildUrlInput(query string, fileUrl []string) string {
+	if len(fileUrl) == 0 {
+		return query
+	}
+	return query + "\n用户上传的文档连接为:" + rebuildUlr(fileUrl[0])
 }
 
 func rebuildUlr(fileUrl string) (retUrl string) {
