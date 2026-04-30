@@ -272,34 +272,22 @@ func (r *wgaMentionResources) hasResources() bool {
 		len(r.KnowledgeItems) > 0
 }
 
-// fetchWgaMentionResources 获取@提及的资源列表
-// 一次性获取所有资源，然后在 BFF 层根据 mentionNames 进行模糊匹配和过滤
+// fetchWgaMentionResources 获取@提及的资源列表，一次性获取所有资源后按 mentionNames 模糊匹配过滤
 func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNames []string) *wgaMentionResources {
-	result := &wgaMentionResources{
-		McpList:        make([]*assistant_service.WgaConfigMcp, 0),
-		WorkflowList:   make([]*assistant_service.WgaConfigWorkflow, 0),
-		SkillList:      make([]*assistant_service.WgaConfigSkill, 0),
-		AssistantList:  make([]*assistant_service.WgaConfigAssistant, 0),
-		KnowledgeList:  make([]*assistant_service.WgaConfigKnowledge, 0),
-		McpItems:       make([]*response.GeneralAgentResourceSelectItem, 0),
-		WorkflowItems:  make([]*response.GeneralAgentResourceSelectItem, 0),
-		SkillItems:     make([]*response.GeneralAgentResourceSelectItem, 0),
-		AssistantItems: make([]*response.GeneralAgentResourceSelectItem, 0),
-		KnowledgeItems: make([]*response.GeneralAgentResourceSelectItem, 0),
-	}
+	result := &wgaMentionResources{}
 
 	if len(mentionNames) == 0 {
 		return result
 	}
 
-	// 一次性获取所有资源（name="" 表示获取全部）
+	// 获取全部资源（name="" 表示获取全部）
 	allResources, err := GetGeneralAgentResourceSelect(ctx, userID, orgID, "")
 	if err != nil {
 		log.Warnf("[wga] get all resources failed: %v", err)
 		return result
 	}
 
-	// 构建 mentionNames 小写列表，用于模糊匹配
+	// 构建 mentionNames 小写列表用于模糊匹配
 	mentionList := make([]string, 0, len(mentionNames))
 	for _, name := range mentionNames {
 		if name != "" {
@@ -307,88 +295,56 @@ func fetchWgaMentionResources(ctx *gin.Context, userID, orgID string, mentionNam
 		}
 	}
 
-	// 去重 map
-	seenMcp := make(map[string]bool)
-	seenWorkflow := make(map[string]bool)
-	seenSkill := make(map[string]bool)
-	seenAssistant := make(map[string]bool)
-	seenKnowledge := make(map[string]bool)
+	// 各资源类型的处理函数
+	handlers := map[string]func(*response.GeneralAgentResourceSelectItem){
+		"mcp": func(item *response.GeneralAgentResourceSelectItem) {
+			result.McpList = append(result.McpList, &assistant_service.WgaConfigMcp{
+				McpId: item.ID, McpType: item.Type,
+			})
+			result.McpItems = append(result.McpItems, item)
+		},
+		"workflow": func(item *response.GeneralAgentResourceSelectItem) {
+			result.WorkflowList = append(result.WorkflowList, &assistant_service.WgaConfigWorkflow{
+				WorkflowId: item.ID,
+			})
+			result.WorkflowItems = append(result.WorkflowItems, item)
+		},
+		"skill": func(item *response.GeneralAgentResourceSelectItem) {
+			result.SkillList = append(result.SkillList, &assistant_service.WgaConfigSkill{
+				SkillId: item.ID, SkillType: constant.SkillTypeCustom,
+			})
+			result.SkillItems = append(result.SkillItems, item)
+		},
+		"assistant": func(item *response.GeneralAgentResourceSelectItem) {
+			result.AssistantList = append(result.AssistantList, &assistant_service.WgaConfigAssistant{
+				AssistantId: item.ID, AssistantType: util.Int2Str(constant.AgentCategorySingle),
+			})
+			result.AssistantItems = append(result.AssistantItems, item)
+		},
+		"knowledge": func(item *response.GeneralAgentResourceSelectItem) {
+			result.KnowledgeList = append(result.KnowledgeList, &assistant_service.WgaConfigKnowledge{
+				KnowledgeId: item.ID,
+			})
+			result.KnowledgeItems = append(result.KnowledgeItems, item)
+		},
+	}
 
-	// 遍历所有资源，进行模糊匹配
+	// 各类型去重 map
+	seen := make(map[string]map[string]bool)
+	for _, t := range []string{"mcp", "workflow", "skill", "assistant", "knowledge"} {
+		seen[t] = make(map[string]bool)
+	}
+
+	// 遍历匹配并去重
 	for _, group := range allResources {
-		switch group.ListType {
-		case "mcp":
-			for _, item := range group.List {
-				if !matchMentionName(item.Name, mentionList) {
-					continue
-				}
-				if seenMcp[item.ID] {
-					continue
-				}
-				seenMcp[item.ID] = true
-				result.McpList = append(result.McpList, &assistant_service.WgaConfigMcp{
-					McpId:   item.ID,
-					McpType: item.Type,
-				})
-				result.McpItems = append(result.McpItems, item)
-			}
-		case "workflow":
-			for _, item := range group.List {
-				if !matchMentionName(item.Name, mentionList) {
-					continue
-				}
-				if seenWorkflow[item.ID] {
-					continue
-				}
-				seenWorkflow[item.ID] = true
-				result.WorkflowList = append(result.WorkflowList, &assistant_service.WgaConfigWorkflow{
-					WorkflowId: item.ID,
-				})
-				result.WorkflowItems = append(result.WorkflowItems, item)
-			}
-		case "skill":
-			for _, item := range group.List {
-				if !matchMentionName(item.Name, mentionList) {
-					continue
-				}
-				if seenSkill[item.ID] {
-					continue
-				}
-				seenSkill[item.ID] = true
-				result.SkillList = append(result.SkillList, &assistant_service.WgaConfigSkill{
-					SkillId:   item.ID,
-					SkillType: constant.SkillTypeCustom,
-				})
-				result.SkillItems = append(result.SkillItems, item)
-			}
-		case "assistant":
-			for _, item := range group.List {
-				if !matchMentionName(item.Name, mentionList) {
-					continue
-				}
-				if seenAssistant[item.ID] {
-					continue
-				}
-				seenAssistant[item.ID] = true
-				result.AssistantList = append(result.AssistantList, &assistant_service.WgaConfigAssistant{
-					AssistantId:   item.ID,
-					AssistantType: util.Int2Str(constant.AgentCategorySingle),
-				})
-				result.AssistantItems = append(result.AssistantItems, item)
-			}
-		case "knowledge":
-			for _, item := range group.List {
-				if !matchMentionName(item.Name, mentionList) {
-					continue
-				}
-				if seenKnowledge[item.ID] {
-					continue
-				}
-				seenKnowledge[item.ID] = true
-				result.KnowledgeList = append(result.KnowledgeList, &assistant_service.WgaConfigKnowledge{
-					KnowledgeId: item.ID,
-				})
-				result.KnowledgeItems = append(result.KnowledgeItems, item)
+		handler, ok := handlers[group.ListType]
+		if !ok {
+			continue
+		}
+		for _, item := range group.List {
+			if matchMentionName(item.Name, mentionList) && !seen[group.ListType][item.ID] {
+				seen[group.ListType][item.ID] = true
+				handler(item)
 			}
 		}
 	}

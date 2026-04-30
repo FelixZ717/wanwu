@@ -3774,6 +3774,21 @@ definitions:
     - ragId
     - rerankConfig
     type: object
+  request.RagCreateReq:
+    properties:
+      avatar:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: 图标
+      desc:
+        description: 描述
+        type: string
+      name:
+        description: 名称
+        type: string
+    required:
+    - name
+    type: object
   request.RagReq:
     properties:
       ragId:
@@ -9982,7 +9997,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/request.AppBriefConfig'
+          $ref: '#/definitions/request.RagCreateReq'
       produces:
       - application/json
       responses:

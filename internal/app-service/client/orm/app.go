@@ -110,7 +110,10 @@ func (c *Client) GetAppListByIds(ctx context.Context, ids []string, appType stri
 		return nil, nil
 	}
 	var publishApps []*model.App
-	if err := sqlopt.InAppIds(ids).Apply(c.db.WithContext(ctx)).Where("app_type = ?", appType).Order("id DESC").Find(&publishApps).Error; err != nil {
+	if err := sqlopt.SQLOptions(
+		sqlopt.InAppIds(ids),
+		sqlopt.WithAppType(appType),
+	).Apply(c.db.WithContext(ctx)).Order("id DESC").Find(&publishApps).Error; err != nil {
 		return nil, toErrStatus("app_publish_apps_get_by_ids", err.Error())
 	}
 	return publishApps, nil

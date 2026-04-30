@@ -2356,7 +2356,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.AppBriefConfig"
+                            "$ref": "#/definitions/request.RagCreateReq"
                         }
                     }
                 ],
@@ -23182,6 +23182,30 @@ const docTemplate = `{
                             "$ref": "#/definitions/request.VisionConfig"
                         }
                     ]
+                }
+            }
+        },
+        "request.RagCreateReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "avatar": {
+                    "description": "图标",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "desc": {
+                    "description": "描述",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
                 }
             }
         },
