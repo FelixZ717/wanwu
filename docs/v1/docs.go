@@ -26807,6 +26807,55 @@ const docTemplate = `{
                 }
             }
         },
+        "response.GeneralAgentFileNode": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.GeneralAgentFileNode"
+                    }
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "\"file\" or \"directory\"",
+                    "type": "string"
+                }
+            }
+        },
+        "response.GeneralAgentInfo": {
+            "type": "object",
+            "properties": {
+                "agentId": {
+                    "description": "子智能体ID",
+                    "type": "string"
+                },
+                "agentName": {
+                    "description": "子智能体名称",
+                    "type": "string"
+                },
+                "avatar": {
+                    "description": "logo",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/request.Avatar"
+                        }
+                    ]
+                },
+                "placeholder": {
+                    "description": "占位提示文本",
+                    "type": "string"
+                }
+            }
+        },
         "response.GeneralAgentResourceSelectItem": {
             "type": "object",
             "properties": {
@@ -26971,7 +27020,7 @@ const docTemplate = `{
                 "files": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WgaFileNode"
+                        "$ref": "#/definitions/response.GeneralAgentFileNode"
                     }
                 },
                 "isDisplay": {
@@ -27044,7 +27093,7 @@ const docTemplate = `{
                     "description": "子智能体列表",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WgaAgentInfo"
+                        "$ref": "#/definitions/response.GeneralAgentInfo"
                     }
                 }
             }
@@ -30180,55 +30229,6 @@ const docTemplate = `{
                 "picNum": {
                     "description": "视觉配置图片数量",
                     "type": "integer"
-                }
-            }
-        },
-        "response.WgaAgentInfo": {
-            "type": "object",
-            "properties": {
-                "agentId": {
-                    "description": "子智能体ID",
-                    "type": "string"
-                },
-                "agentName": {
-                    "description": "子智能体名称",
-                    "type": "string"
-                },
-                "avatar": {
-                    "description": "logo",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/request.Avatar"
-                        }
-                    ]
-                },
-                "placeholder": {
-                    "description": "占位提示文本",
-                    "type": "string"
-                }
-            }
-        },
-        "response.WgaFileNode": {
-            "type": "object",
-            "properties": {
-                "children": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/response.WgaFileNode"
-                    }
-                },
-                "mimeType": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "size": {
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "\"file\" or \"directory\"",
-                    "type": "string"
                 }
             }
         },

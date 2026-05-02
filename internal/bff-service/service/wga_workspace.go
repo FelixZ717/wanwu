@@ -205,13 +205,13 @@ func getWgaWorkspaceInfoInternal(currentDir string) (int64, int, error) {
 // ============================================================
 
 // BuildWgaWorkspaceFileTree 构建工作空间文件树
-func BuildWgaWorkspaceFileTree(dir string) ([]*response.WgaFileNode, error) {
+func BuildWgaWorkspaceFileTree(dir string) ([]*response.GeneralAgentFileNode, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	var files []*response.WgaFileNode
+	var files []*response.GeneralAgentFileNode
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {
@@ -219,7 +219,7 @@ func BuildWgaWorkspaceFileTree(dir string) ([]*response.WgaFileNode, error) {
 			continue
 		}
 
-		fileNode := &response.WgaFileNode{
+		fileNode := &response.GeneralAgentFileNode{
 			Name: entry.Name(),
 		}
 
@@ -249,7 +249,7 @@ func BuildWgaWorkspaceFileTree(dir string) ([]*response.WgaFileNode, error) {
 }
 
 // CalculateWgaFileTreeTotalSize 计算文件树总大小
-func CalculateWgaFileTreeTotalSize(files []*response.WgaFileNode) int64 {
+func CalculateWgaFileTreeTotalSize(files []*response.GeneralAgentFileNode) int64 {
 	var total int64
 	for _, f := range files {
 		if f.Type == "directory" {
@@ -457,7 +457,7 @@ func PreviewWgaWorkspace(store *wga_persistent.Store, runID, path string) (*WgaW
 
 // WgaWorkspaceTreeResult 工作空间文件树结果
 type WgaWorkspaceTreeResult struct {
-	Files     []*response.WgaFileNode
+	Files     []*response.GeneralAgentFileNode
 	FileCount int
 	TotalSize int64
 }

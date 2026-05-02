@@ -26,7 +26,7 @@ func GetGeneralAgentSubList(ctx *gin.Context) (*response.GetGeneralAgentSubListR
 
 	// 获取wga所支持的子智能体
 	for _, agent := range config.WgaCfg().SubAgents {
-		result.WgaAgentList = append(result.WgaAgentList, response.WgaAgentInfo{
+		result.WgaAgentList = append(result.WgaAgentList, response.GeneralAgentInfo{
 			AgentID:     agent.AgentID,
 			AgentName:   agent.AgentName,
 			Avatar:      request.Avatar{Path: agent.AvatarPath},

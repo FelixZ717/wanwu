@@ -8,12 +8,14 @@ import (
 	"github.com/UnicomAI/wanwu/api/proto/common"
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	model_service "github.com/UnicomAI/wanwu/api/proto/model-service"
+	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/wga"
+	wga_persistent "github.com/UnicomAI/wanwu/pkg/wga-persistent"
 	wga_option "github.com/UnicomAI/wanwu/pkg/wga/wga-option"
 	"github.com/gin-gonic/gin"
 )
@@ -312,4 +314,31 @@ func CheckGeneralAgentConversationConfig(ctx *gin.Context, userId, orgId string,
 	}
 
 	return result, nil
+}
+
+// GeneralAgentConversationChat 通用智能体对话接口
+func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversationChatReq) error {
+	var workspaceStore *wga_persistent.Store
+	if config.WgaCfg().Persistent.Enabled {
+		store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
+		if err != nil {
+			log.Errorf("[wga] thread %v failed to create persistent store: %v", req.ThreadID, err)
+		} else {
+			workspaceStore = store
+		}
+	}
+
+	agentID := req.AgentID
+	if agentID == "" {
+		agentID = config.WgaCfg().AgentID
+	}
+
+	return WgaConversationChat(ctx, &WgaChatParams{
+		UserID:         userId,
+		OrgID:          orgId,
+		AgentID:        agentID,
+		ThreadID:       req.ThreadID,
+		Messages:       req.Messages,
+		WorkspaceStore: workspaceStore,
+	})
 }

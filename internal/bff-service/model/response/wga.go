@@ -26,7 +26,7 @@ type GeneralAgentConfigToolItem struct {
 	Type string `json:"toolType"` // 工具类型
 }
 
-type WgaAgentInfo struct {
+type GeneralAgentInfo struct {
 	AgentID     string         `json:"agentId"`     // 子智能体ID
 	AgentName   string         `json:"agentName"`   // 子智能体名称
 	Avatar      request.Avatar `json:"avatar"`      // logo
@@ -34,7 +34,7 @@ type WgaAgentInfo struct {
 }
 
 type GetGeneralAgentSubListResp struct {
-	WgaAgentList []WgaAgentInfo `json:"wgaAgentList"` // 子智能体列表
+	WgaAgentList []GeneralAgentInfo `json:"wgaAgentList"` // 子智能体列表
 }
 
 type GetGeneralAgentConversationConfigResp struct {
@@ -80,18 +80,18 @@ type GeneralAgentCheckTool struct {
 	Meet   bool   `json:"meet"`   // 是否符合要求
 }
 
-type WgaFileNode struct {
-	Name     string         `json:"name"`
-	Type     string         `json:"type"` // "file" or "directory"
-	Size     int64          `json:"size,omitempty"`
-	MimeType string         `json:"mimeType,omitempty"`
-	Children []*WgaFileNode `json:"children,omitempty"`
+type GeneralAgentFileNode struct {
+	Name     string                  `json:"name"`
+	Type     string                  `json:"type"` // "file" or "directory"
+	Size     int64                   `json:"size,omitempty"`
+	MimeType string                  `json:"mimeType,omitempty"`
+	Children []*GeneralAgentFileNode `json:"children,omitempty"`
 }
 
 type GeneralAgentWorkspaceResp struct {
 	GeneralAgentConversationWorkspaceInfo
-	Path  string         `json:"path"`
-	Files []*WgaFileNode `json:"files"`
+	Path  string                  `json:"path"`
+	Files []*GeneralAgentFileNode `json:"files"`
 }
 
 type GeneralAgentConversationDetailInfo struct {

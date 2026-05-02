@@ -6198,6 +6198,38 @@ definitions:
         description: 对话标题
         type: string
     type: object
+  response.GeneralAgentFileNode:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/response.GeneralAgentFileNode'
+        type: array
+      mimeType:
+        type: string
+      name:
+        type: string
+      size:
+        type: integer
+      type:
+        description: '"file" or "directory"'
+        type: string
+    type: object
+  response.GeneralAgentInfo:
+    properties:
+      agentId:
+        description: 子智能体ID
+        type: string
+      agentName:
+        description: 子智能体名称
+        type: string
+      avatar:
+        allOf:
+        - $ref: '#/definitions/request.Avatar'
+        description: logo
+      placeholder:
+        description: 占位提示文本
+        type: string
+    type: object
   response.GeneralAgentResourceSelectItem:
     properties:
       author:
@@ -6310,7 +6342,7 @@ definitions:
         type: integer
       files:
         items:
-          $ref: '#/definitions/response.WgaFileNode'
+          $ref: '#/definitions/response.GeneralAgentFileNode'
         type: array
       isDisplay:
         type: boolean
@@ -6359,7 +6391,7 @@ definitions:
       wgaAgentList:
         description: 子智能体列表
         items:
-          $ref: '#/definitions/response.WgaAgentInfo'
+          $ref: '#/definitions/response.GeneralAgentInfo'
         type: array
     type: object
   response.GetGeneralAgentToolSelectResp:
@@ -8453,38 +8485,6 @@ definitions:
       picNum:
         description: 视觉配置图片数量
         type: integer
-    type: object
-  response.WgaAgentInfo:
-    properties:
-      agentId:
-        description: 子智能体ID
-        type: string
-      agentName:
-        description: 子智能体名称
-        type: string
-      avatar:
-        allOf:
-        - $ref: '#/definitions/request.Avatar'
-        description: logo
-      placeholder:
-        description: 占位提示文本
-        type: string
-    type: object
-  response.WgaFileNode:
-    properties:
-      children:
-        items:
-          $ref: '#/definitions/response.WgaFileNode'
-        type: array
-      mimeType:
-        type: string
-      name:
-        type: string
-      size:
-        type: integer
-      type:
-        description: '"file" or "directory"'
-        type: string
     type: object
   response.WorkflowTemplateDetail:
     properties:

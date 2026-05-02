@@ -174,10 +174,6 @@ func buildWgaKnowledgeOptions(ctx *gin.Context, userId, orgId, threadId, runId s
 		return nil, nil
 	}
 
-	if err := checkWgaKnowledgeConfig(ctx, userId, orgId, knowledgeList); err != nil {
-		return nil, err
-	}
-
 	knowledgeIdList := make([]string, 0, len(knowledgeList))
 	for _, k := range knowledgeList {
 		knowledgeIdList = append(knowledgeIdList, k.KnowledgeId)

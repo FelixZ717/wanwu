@@ -26,6 +26,33 @@ import (
 	"github.com/google/uuid"
 )
 
+// ============================================================================
+// WgaChatParams - 通用 WGA 对话参数
+// ============================================================================
+
+// WgaChatParams 通用 WGA 对话参数
+// 支持不同业务场景通过传入不同的 WorkspaceStore 实现 workspace 与 threadID 的解耦
+type WgaChatParams struct {
+	// 必填参数
+	UserID   string
+	OrgID    string
+	AgentID  string
+	ThreadID string
+	Messages []request.GeneralAgentConversationMessage
+
+	// WorkspaceStore - 由调用方创建
+	// - 通用智能体：NewGeneralAgentWorkspaceStore(threadID)，store 与 threadID 绑定
+	// - 新业务跨 thread：自定义 Store（如共享 workspace），与请求 threadID 解耦
+	// - 无 workspace：传 nil
+	WorkspaceStore *wga_persistent.Store
+
+	// WorkspaceReadOnly - 工作空间只读模式
+	// - true: 只设置 InputDir，agent 执行产出不写回 workspace
+	// - false: 同时设置 InputDir 和 OutputDir，agent 执行产出写回 workspace
+	// - 仅当 WorkspaceStore 不为 nil 时生效，用户上传文件不受此限制
+	WorkspaceReadOnly bool
+}
+
 const (
 	wgaConversationHistoryEventESIndexName = "wga_chat_history_event" // 通用智能体聊天历史ES索引
 )
@@ -34,12 +61,35 @@ func wgaConversationHistoryEventESIndexNotFound(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "index_not_found_exception") && strings.Contains(err.Error(), wgaConversationHistoryEventESIndexName)
 }
 
-func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req request.GeneralAgentConversationChatReq) error {
-	// 过滤出当前用户消息（最后一条 User 消息）
+// ============================================================================
+// WgaConversationChat - 通用 WGA 对话执行
+// ============================================================================
+
+// WgaConversationChat 通用的 WGA 对话执行（完整流程，包含 SSE 响应）
+// 支持不同业务场景通过传入不同的 WorkspaceStore 实现 workspace 与 threadID 的解耦
+func WgaConversationChat(ctx *gin.Context, params *WgaChatParams) error {
+	// 参数检查
+	if params.UserID == "" {
+		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "userId is required")
+	}
+	if params.OrgID == "" {
+		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "orgId is required")
+	}
+	if params.AgentID == "" {
+		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "agentId is required")
+	}
+	if params.ThreadID == "" {
+		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "threadId is required")
+	}
+	if len(params.Messages) == 0 {
+		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "messages is required")
+	}
+
+	// 过滤用户消息（最后一条必须为 user 消息）
 	var userInputMessage *request.GeneralAgentConversationMessage
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == ag_ui_util.RoleUser {
-			userInputMessage = &req.Messages[i]
+	for i := len(params.Messages) - 1; i >= 0; i-- {
+		if params.Messages[i].Role == ag_ui_util.RoleUser {
+			userInputMessage = &params.Messages[i]
 			break
 		}
 	}
@@ -49,41 +99,34 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 
 	// 验证 threadId 是否存在
 	existsResp, err := assistant.WgaConversationExists(ctx.Request.Context(), &assistant_service.WgaConversationExistsReq{
-		ThreadId: req.ThreadID,
+		ThreadId: params.ThreadID,
 		Identity: &assistant_service.Identity{
-			UserId: userId,
-			OrgId:  orgId,
+			UserId: params.UserID,
+			OrgId:  params.OrgID,
 		},
 	})
 	if err != nil {
 		return err
 	}
 	if !existsResp.Exists {
-		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("threadId %s not found", req.ThreadID))
+		return grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("threadId %s not found", params.ThreadID))
 	}
 
 	// 获取上一次输出的目录信息（如果存在）
 	var lastWorkspaceTotalSize int64
 	var lastWorkspaceFileCount int
-	var workspaceStore *wga_persistent.Store
-	if config.WgaCfg().Persistent.Enabled {
-		store, err := NewGeneralAgentWorkspaceStore(req.ThreadID)
+	if params.WorkspaceStore != nil {
+		lastRunDir, err := GetWgaWorkspaceLastRunDir(params.WorkspaceStore)
 		if err != nil {
-			log.Errorf("[wga] thread %v failed to create persistent store: %v", req.ThreadID, err)
-		} else {
-			workspaceStore = store
-			lastRunDir, err := GetWgaWorkspaceLastRunDir(store)
+			log.Errorf("[wga] thread %v failed to get last run dir: %v", params.ThreadID, err)
+		}
+		if lastRunDir != "" {
+			wsInfo, err := GetWgaWorkspaceInfo(lastRunDir)
 			if err != nil {
-				log.Errorf("[wga] thread %v failed to get last run dir: %v", req.ThreadID, err)
-			}
-			if lastRunDir != "" {
-				wsInfo, err := GetWgaWorkspaceInfo(lastRunDir)
-				if err != nil {
-					log.Errorf("[wga] thread %v failed to get last workspace info: %v", req.ThreadID, err)
-				} else {
-					lastWorkspaceTotalSize = wsInfo.TotalSize
-					lastWorkspaceFileCount = wsInfo.FileCount
-				}
+				log.Errorf("[wga] thread %v failed to get last workspace info: %v", params.ThreadID, err)
+			} else {
+				lastWorkspaceTotalSize = wsInfo.TotalSize
+				lastWorkspaceFileCount = wsInfo.FileCount
 			}
 		}
 	}
@@ -91,31 +134,28 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 	runID := uuid.NewString()
 
 	// 构建 WGA 选项
-	opts, err := buildWgaRunOptions(ctx, userId, orgId, req.AgentID, req.ThreadID, runID, userInputMessage)
+	opts, err := buildWgaRunOptions(ctx, params.UserID, params.OrgID, params.AgentID, params.ThreadID, runID, userInputMessage, params.WorkspaceStore, params.WorkspaceReadOnly)
 	if err != nil {
 		return err
 	}
 
 	// 运行 WGA
-	agentID := req.AgentID
-	if agentID == "" {
-		agentID = config.WgaCfg().AgentID
-	}
-	_, iter, err := wga.Run(ctx.Request.Context(), agentID, opts...)
+	_, iter, err := wga.Run(ctx.Request.Context(), params.AgentID, opts...)
 	if err != nil {
 		return err
 	}
 
-	// 将 WGA 事件流转换为 AG-UI 事件流
-	tr := ag_ui_util.NewEinoTranslator(req.ThreadID, runID)
+	// 转换为 AG-UI 事件流
+	tr := ag_ui_util.NewEinoTranslator(params.ThreadID, runID)
 	eventCh := tr.TranslateStream(ctx.Request.Context(), iter)
 
+	// AG-UI 事件流处理器
 	processorConfig := &ag_ui_util.ProcessorConfig{
 		ToolNameMapper: map[string]string{
 			"transfer_to_agent": "正在交给专业智能体",
 		},
 		ExcludedAgentNames: []string{
-			config.WgaCfg().AgentID,     // 排除主智能体，避免生成冗余的切换智能体提示
+			config.WgaCfg().AgentID,     // 排除主智能体，避免生成冗余的智能体折叠效果
 			ag_ui_util.DefaultAgentName, // 排除default，避免生成冗余的切换智能体提示
 		},
 		// ResultFormatters: map[string]func(string) string{
@@ -135,7 +175,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 
 	processor := ag_ui_util.NewStreamProcessor(processorConfig)
 	processedEventCh, historyEventCh := processor.Process(ctx.Request.Context(), eventCh, map[string]interface{}{
-		"threadId":       req.ThreadID,
+		"threadId":       params.ThreadID,
 		"runId":          runID,
 		"messages":       []interface{}{userInputMessage},
 		"state":          map[string]interface{}{},
@@ -144,19 +184,20 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 		"forwardedProps": map[string]interface{}{},
 	})
 
-	// 保存智能体返回的消息
-	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, userId, orgId, req.ThreadID, runID,
-		workspaceStore,
+	// 异步保存智能体返回的消息
+	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, params.UserID, params.OrgID, params.ThreadID, runID,
+		params.WorkspaceStore,
 		lastWorkspaceTotalSize,
 		lastWorkspaceFileCount,
 	)
 
+	// SSE 响应
 	outputCh := processWgaEvent2OutputCh(
 		ctx.Request.Context(),
 		processedEventCh,
-		req.ThreadID,
+		params.ThreadID,
 		runID,
-		workspaceStore,
+		params.WorkspaceStore,
 		lastWorkspaceTotalSize,
 		lastWorkspaceFileCount,
 	)
@@ -169,7 +210,7 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 		select {
 		case line, ok := <-outputCh:
 			if !ok {
-				log.Infof("[GeneralAgentConversationChat] threadId=%s, runId=%s, outputCh closed", req.ThreadID, runID)
+				log.Infof("[WgaConversationChat] threadId=%s, runId=%s, outputCh closed", params.ThreadID, runID)
 				return false
 			}
 			_, _ = fmt.Fprintf(w, "data: %s\n\n", line)
@@ -257,7 +298,7 @@ func filterWgaHistoryMessages(ctx *gin.Context, userId, orgId, threadId string) 
 	return messages, nil
 }
 
-func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runID string, userInputMessage *request.GeneralAgentConversationMessage) ([]wga_option.Option, error) {
+func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runID string, userInputMessage *request.GeneralAgentConversationMessage, workspaceStore *wga_persistent.Store, workspaceReadOnly bool) ([]wga_option.Option, error) {
 	// 获取 WGA 配置
 	wgaConfigResp, err := assistant.GetWgaConfig(ctx.Request.Context(), &assistant_service.GetWgaConfigReq{
 		Identity: &assistant_service.Identity{
@@ -269,12 +310,8 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		return nil, err
 	}
 	wgaConfig := wgaConfigResp.Config
-
-	// 解析用户消息中的 @提及资源
-	var mentionResources *wgaMentionResources
-	if userInputMessage != nil {
-		mentionNames := parseWgaResourceMentions(userInputMessage.Content)
-		mentionResources = fetchWgaMentionResources(ctx, userID, orgID, mentionNames)
+	if wgaConfig == nil {
+		wgaConfig = &assistant_service.WgaConfig{}
 	}
 
 	// 获取 WGA Conversation 配置
@@ -289,6 +326,13 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		return nil, err
 	}
 	wgaConversationConfig := wgaConversationConfigResp.Config
+
+	// 解析用户消息中的 @提及资源
+	mentionResources := &wgaMentionResources{}
+	if userInputMessage != nil {
+		mentionNames := parseWgaResourceMentions(userInputMessage.Content)
+		mentionResources = fetchWgaMentionResources(ctx, userID, orgID, mentionNames)
+	}
 
 	opts := []wga_option.Option{
 		wga_option.WithRunSession(wga_option.RunSession{
@@ -310,7 +354,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 校验并构建工具配置选项
-	if wgaConfig != nil && len(wgaConfig.ToolList) > 0 {
+	if len(wgaConfig.ToolList) > 0 {
 		toolOpts, err := buildWgaToolOptions(ctx, userID, orgID, wgaConfig.ToolList)
 		if err != nil {
 			return nil, err
@@ -330,13 +374,8 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 校验并构建工作流配置选项（追加@提及的工作流）
-	workflowList := make([]*assistant_service.WgaConfigWorkflow, 0)
-	if wgaConfig != nil {
-		workflowList = append(workflowList, wgaConfig.WorkflowList...)
-	}
-	if mentionResources != nil {
-		workflowList = append(workflowList, mentionResources.WorkflowList...)
-	}
+	workflowList := append([]*assistant_service.WgaConfigWorkflow{}, wgaConfig.WorkflowList...)
+	workflowList = append(workflowList, mentionResources.WorkflowList...)
 	if len(workflowList) > 0 {
 		// 去重
 		seen := make(map[string]bool)
@@ -358,13 +397,8 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 校验并构建MCP配置选项（追加@提及的MCP）
-	mcpList := make([]*assistant_service.WgaConfigMcp, 0)
-	if wgaConfig != nil {
-		mcpList = append(mcpList, wgaConfig.McpList...)
-	}
-	if mentionResources != nil {
-		mcpList = append(mcpList, mentionResources.McpList...)
-	}
+	mcpList := append([]*assistant_service.WgaConfigMcp{}, wgaConfig.McpList...)
+	mcpList = append(mcpList, mentionResources.McpList...)
 	if len(mcpList) > 0 {
 		// 去重
 		seen := make(map[string]bool)
@@ -386,13 +420,8 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 校验并构建智能体配置选项（追加@提及的智能体）
-	assistantList := make([]*assistant_service.WgaConfigAssistant, 0)
-	if wgaConfig != nil {
-		assistantList = append(assistantList, wgaConfig.AssistantList...)
-	}
-	if mentionResources != nil {
-		assistantList = append(assistantList, mentionResources.AssistantList...)
-	}
+	assistantList := append([]*assistant_service.WgaConfigAssistant{}, wgaConfig.AssistantList...)
+	assistantList = append(assistantList, mentionResources.AssistantList...)
 	if len(assistantList) > 0 {
 		// 去重
 		seen := make(map[string]bool)
@@ -414,13 +443,8 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 校验并构建Skills配置选项（追加@提及的Skills）
-	skillList := make([]*assistant_service.WgaConfigSkill, 0)
-	if wgaConfig != nil {
-		skillList = append(skillList, wgaConfig.SkillList...)
-	}
-	if mentionResources != nil {
-		skillList = append(skillList, mentionResources.SkillList...)
-	}
+	skillList := append([]*assistant_service.WgaConfigSkill{}, wgaConfig.SkillList...)
+	skillList = append(skillList, mentionResources.SkillList...)
 	if len(skillList) > 0 {
 		// 去重
 		seen := make(map[string]bool)
@@ -442,13 +466,8 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 校验并构建Knowledge配置选项（追加@提及的Knowledge）
-	knowledgeList := make([]*assistant_service.WgaConfigKnowledge, 0)
-	if wgaConfig != nil {
-		knowledgeList = append(knowledgeList, wgaConfig.KnowledgeList...)
-	}
-	if mentionResources != nil {
-		knowledgeList = append(knowledgeList, mentionResources.KnowledgeList...)
-	}
+	knowledgeList := append([]*assistant_service.WgaConfigKnowledge{}, wgaConfig.KnowledgeList...)
+	knowledgeList = append(knowledgeList, mentionResources.KnowledgeList...)
 	if len(knowledgeList) > 0 {
 		// 去重
 		seen := make(map[string]bool)
@@ -470,24 +489,18 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 
 	// 持久化存储
-	if config.WgaCfg().Persistent.Enabled {
-		store, err := NewGeneralAgentWorkspaceStore(threadID)
+	if workspaceStore != nil {
+		dirs, err := PrepareWgaWorkspaceDirs(workspaceStore, runID, true)
 		if err != nil {
-			log.Errorf("[wga] thread %v create persistent store err: %v", threadID, err)
+			log.Errorf("[wga] thread %v prepare input output dir err: %v", threadID, err)
 		} else {
-			dirs, err := PrepareWgaWorkspaceDirs(store, runID, true)
-			if err != nil {
-				log.Errorf("[wga] thread %v prepare input output dir err: %v", threadID, err)
-			} else {
-				opts = append(opts,
-					wga_option.WithInputDir(dirs.InputDir),
-					wga_option.WithOutputDir(dirs.OutputDir),
-				)
-				// 下载用户消息中的URL文件到inputDir
-				if urls := userInputMessage.GetURLs(); len(urls) > 0 {
-					if err := DownloadWgaWorkspaceURLs(urls, dirs.OutputDir); err != nil {
-						log.Errorf("download URLs %+v to inputDir %v failed: %v", urls, dirs.OutputDir, err)
-					}
+			opts = append(opts, wga_option.WithInputDir(dirs.InputDir))
+			if !workspaceReadOnly {
+				opts = append(opts, wga_option.WithOutputDir(dirs.OutputDir))
+			}
+			if urls := userInputMessage.GetURLs(); len(urls) > 0 {
+				if err := DownloadWgaWorkspaceURLs(urls, dirs.OutputDir); err != nil {
+					log.Errorf("download URLs %+v to workspace dir %v failed: %v", urls, dirs.OutputDir, err)
 				}
 			}
 		}
@@ -498,7 +511,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	if err != nil {
 		return nil, err
 	}
-	if mentionResources != nil && mentionResources.hasResources() {
+	if mentionResources.hasResources() {
 		messages = append(messages, buildWgaMentionResourcesMessage(mentionResources))
 	}
 	messages = append(messages, convertWgaMessage(userInputMessage.Role, userInputMessage.Content))
