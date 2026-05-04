@@ -132,21 +132,23 @@ func (f OptionFunc) apply(opts *RunOption) error {
 
 // RunOption 运行选项。
 type RunOption struct {
-	RunSession     RunSession
-	ModelConfig    ModelConfig
-	Sandbox        SandboxConfig
-	RunnerType     RunnerType
-	Instruction    string
-	OverallTask    string
-	InputDir       string
-	OutputDir      string
-	Skills         []Skill
-	Tools          []Tool
-	MCPs           []MCP         // MCP 服务器列表
-	Messages       []adk.Message // 历史消息 + 当前问题（最后一条 User 消息）
-	EnableThinking bool
-	SkipCleanup    bool
-	AgentName      string
+	RunSession                 RunSession
+	ModelConfig                ModelConfig
+	Sandbox                    SandboxConfig
+	RunnerType                 RunnerType
+	Instruction                string
+	OverallTask                string
+	InputDir                   string
+	OutputDir                  string
+	Skills                     []Skill
+	Tools                      []Tool
+	MCPs                       []MCP         // MCP 服务器列表
+	Messages                   []adk.Message // 历史消息 + 当前问题（最后一条 User 消息）
+	EnableThinking             bool
+	EnableHumanInTheLoop       bool // 是否启用人机交互
+	EnableHumanInTheLoopCustom bool // 是否允许用户自定义回答
+	SkipCleanup                bool
+	AgentName                  string
 }
 
 func (o *RunOption) Apply(opts ...Option) error {
@@ -338,6 +340,16 @@ func WithSkipCleanup(skip bool) Option {
 func WithAgentName(name string) Option {
 	return OptionFunc(func(opts *RunOption) error {
 		opts.AgentName = name
+		return nil
+	})
+}
+
+func WithEnableHumanInTheLoop(enable bool, enableCustom ...bool) Option {
+	return OptionFunc(func(opts *RunOption) error {
+		opts.EnableHumanInTheLoop = enable
+		if len(enableCustom) > 0 {
+			opts.EnableHumanInTheLoopCustom = enableCustom[0]
+		}
 		return nil
 	})
 }

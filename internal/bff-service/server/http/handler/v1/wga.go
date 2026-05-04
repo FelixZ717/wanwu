@@ -449,3 +449,47 @@ func GeneralAgentConversationChat(ctx *gin.Context) {
 		gin_util.Response(ctx, nil, err)
 	}
 }
+
+// GeneralAgentReplyQuestion
+//
+//	@Tags			wga
+//	@Summary		回答问题
+//	@Description	回答智能体提出的问题（Human-in-the-Loop），解除 AI 阻塞等待
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.GeneralAgentReplyQuestionReq	true	"回答问题请求参数"
+//	@Success		200		{object}	response.Response						"成功响应"
+//	@Failure		400		{object}	response.Response						"参数错误"
+//	@Failure		500		{object}	response.Response						"服务器错误"
+//	@Router			/general/agent/question/reply [post]
+func GeneralAgentReplyQuestion(ctx *gin.Context) {
+	var req request.GeneralAgentReplyQuestionReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.GeneralAgentReplyQuestion(ctx.Request.Context(), req.RunID, req.QuestionID, req.Answers)
+	gin_util.Response(ctx, nil, err)
+}
+
+// GeneralAgentRejectQuestion
+//
+//	@Tags			wga
+//	@Summary		拒绝问题
+//	@Description	取消智能体提出的问题（Human-in-the-Loop），AI 将收到 RejectedError
+//	@Security		JWT
+//	@Accept			json
+//	@Produce		json
+//	@Param			data	body		request.GeneralAgentRejectQuestionReq	true	"拒绝问题请求参数"
+//	@Success		200		{object}	response.Response						"成功响应"
+//	@Failure		400		{object}	response.Response						"参数错误"
+//	@Failure		500		{object}	response.Response						"服务器错误"
+//	@Router			/general/agent/question/reject [post]
+func GeneralAgentRejectQuestion(ctx *gin.Context) {
+	var req request.GeneralAgentRejectQuestionReq
+	if !gin_util.Bind(ctx, &req) {
+		return
+	}
+	err := service.GeneralAgentRejectQuestion(ctx.Request.Context(), req.RunID, req.QuestionID)
+	gin_util.Response(ctx, nil, err)
+}

@@ -38,8 +38,8 @@ func WgaSandboxRun(ctx *gin.Context, req *request.WgaSandboxRunReq) error {
 		ModelName:    modelInfo.DisplayName,
 	}
 
-	sandboxCfg := config.Cfg().WgaSandbox.Sandbox
 	var sandbox wga_sandbox_option.SandboxConfig
+	sandboxCfg := config.Cfg().WgaSandbox.Sandbox
 	switch sandboxCfg.Type {
 	case string(wga_sandbox_option.SandboxTypeOneshot):
 		sandbox = wga_sandbox_option.SandboxOneshot(sandboxCfg.ImageName)
@@ -109,4 +109,12 @@ func buildWgaSandboxLineProcessor() func(sse_util.SSEWriterClient[string], strin
 		}
 		return "data: " + lineText + "\n\n", false, nil
 	}
+}
+
+func getWgaSandboxConfig() (wga_sandbox_option.SandboxConfig, error) {
+	cfg := config.Cfg().WgaSandbox.Sandbox
+	if cfg.Type != "reuse" || cfg.Host == "" {
+		return wga_sandbox_option.SandboxConfig{}, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, "sandbox config not available or not in reuse mode")
+	}
+	return wga_sandbox_option.SandboxReuse(cfg.Host), nil
 }

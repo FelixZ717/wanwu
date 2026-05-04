@@ -39,8 +39,8 @@ const (
 	configTemplate = `{
   "$schema": "https://opencode.ai/config.json",
   "permission": {
-    "*": "allow",
-	"question": "deny"
+    "*": "allow"{{if .EnableHumanInTheLoop}},
+    "question": "ask"{{end}}
   },
   "provider": {
     "{{.Provider}}": {
@@ -240,7 +240,7 @@ func (r *Runner) setupConfig(ctx context.Context) error {
 		return fmt.Errorf("failed to create .opencode directory: %w", err)
 	}
 
-	content, err := renderConfig(r.opt.ModelConfig, r.opt.MCPs)
+	content, err := renderConfig(r.opt.ModelConfig, r.opt.MCPs, r.opt.EnableHumanInTheLoop)
 	if err != nil {
 		return fmt.Errorf("failed to render config: %w", err)
 	}
@@ -633,6 +633,15 @@ func (r *Runner) handleBusEvent(event *sseEvent) (string, bool) {
 			return "", false
 		}
 		return r.convertErrorEvent(event), false
+	case string(OpencodeEventTypeQuestionAsked):
+		// 问题提出事件（Human-in-the-Loop）
+		return r.convertQuestionEvent(event, OpencodeEventTypeQuestionAsked, "pending"), false
+	case string(OpencodeEventTypeQuestionReplied):
+		// 问题已回答事件（Human-in-the-Loop）
+		return r.convertQuestionEvent(event, OpencodeEventTypeQuestionReplied, "answered"), false
+	case string(OpencodeEventTypeQuestionRejected):
+		// 问题被拒绝事件（Human-in-the-Loop）
+		return r.convertQuestionEvent(event, OpencodeEventTypeQuestionRejected, "rejected"), false
 	default:
 		return "", false
 	}
@@ -865,12 +874,62 @@ func (r *Runner) convertErrorEvent(event *sseEvent) string {
 	return string(data)
 }
 
+// convertQuestionEvent 转换问题事件（Human-in-the-Loop）。
+func (r *Runner) convertQuestionEvent(event *sseEvent, eventType OpencodeEventType, status string) string {
+	evt := OpencodeEvent{
+		Type:      eventType,
+		Timestamp: time.Now().UnixMilli(),
+		SessionID: r.sessionID,
+	}
+
+	props := event.Payload.Properties
+	questionID := props.ID
+	if questionID == "" {
+		questionID = props.RequestID
+	}
+
+	questionP := questionPart{
+		Type:       "question",
+		QuestionID: questionID,
+		SessionID:  props.SessionID,
+		Status:     status,
+		Questions:  make([]questionItem, 0, len(props.Questions)),
+	}
+
+	for _, q := range props.Questions {
+		custom := r.opt.EnableHumanInTheLoopCustom
+		if q.Custom != nil {
+			custom = *q.Custom
+		}
+		item := questionItem{
+			Question: q.Question,
+			Header:   q.Header,
+			Multiple: q.Multiple,
+			Custom:   custom,
+			Options:  make([]questionOption, 0, len(q.Options)),
+		}
+		for _, opt := range q.Options {
+			item.Options = append(item.Options, questionOption(opt))
+		}
+		questionP.Questions = append(questionP.Questions, item)
+	}
+
+	if len(props.Answers) > 0 {
+		questionP.Answers = props.Answers
+	}
+
+	evt.Part, _ = json.Marshal(questionP)
+	data, _ := json.Marshal(evt)
+
+	return string(data)
+}
+
 // ============================================================================
 // 模板渲染
 // ============================================================================
 
 // renderConfig 渲染 opencode 配置文件。
-func renderConfig(config wga_sandbox_option.ModelConfig, mcps []wga_sandbox_option.MCP) (string, error) {
+func renderConfig(config wga_sandbox_option.ModelConfig, mcps []wga_sandbox_option.MCP, enableHITL bool) (string, error) {
 	tmpl, err := template.New("config").Funcs(template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 		"len": func(v interface{}) int {
@@ -886,10 +945,12 @@ func renderConfig(config wga_sandbox_option.ModelConfig, mcps []wga_sandbox_opti
 	}
 	data := struct {
 		wga_sandbox_option.ModelConfig
-		MCPs []wga_sandbox_option.MCP
+		MCPs                 []wga_sandbox_option.MCP
+		EnableHumanInTheLoop bool
 	}{
-		ModelConfig: config,
-		MCPs:        mcps,
+		ModelConfig:          config,
+		MCPs:                 mcps,
+		EnableHumanInTheLoop: enableHITL,
 	}
 	var buf strings.Builder
 	if err := tmpl.Execute(&buf, data); err != nil {

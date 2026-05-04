@@ -6761,6 +6761,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/general/agent/question/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "取消智能体提出的问题（Human-in-the-Loop），AI 将收到 RejectedError",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "拒绝问题",
+                "parameters": [
+                    {
+                        "description": "拒绝问题请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GeneralAgentRejectQuestionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/general/agent/question/reply": {
+            "post": {
+                "security": [
+                    {
+                        "JWT": []
+                    }
+                ],
+                "description": "回答智能体提出的问题（Human-in-the-Loop），解除 AI 阻塞等待",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wga"
+                ],
+                "summary": "回答问题",
+                "parameters": [
+                    {
+                        "description": "回答问题请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.GeneralAgentReplyQuestionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功响应",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/general/agent/resource/select": {
             "get": {
                 "security": [
@@ -21833,6 +21935,46 @@ const docTemplate = `{
                 },
                 "role": {
                     "description": "角色 user",
+                    "type": "string"
+                }
+            }
+        },
+        "request.GeneralAgentRejectQuestionReq": {
+            "type": "object",
+            "required": [
+                "questionId",
+                "runId"
+            ],
+            "properties": {
+                "questionId": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.GeneralAgentReplyQuestionReq": {
+            "type": "object",
+            "required": [
+                "answers",
+                "questionId",
+                "runId"
+            ],
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "questionId": {
+                    "type": "string"
+                },
+                "runId": {
                     "type": "string"
                 }
             }

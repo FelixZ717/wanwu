@@ -56,6 +56,30 @@ func ConvertToEinoIterator(
 					continue
 				}
 				for _, msg := range msgs {
+					// Question 消息（Human-in-the-Loop）需要特殊处理：
+					// 1. 使用非流式方式（IsStreaming: false），直接通过 Message 字段传递
+					// 2. 不走 stream pipe，避免流式管道阻塞导致事件无法及时消费
+					// 3. Extra 字段包含 questionType="question" 和 questionData
+					if msg.Extra != nil {
+						if qt, ok := msg.Extra["questionType"].(string); ok && qt == "question" {
+							flush()
+							curRole = msg.Role
+							curTool = msg.ToolName
+
+							generator.Send(&adk.AgentEvent{
+								Output: &adk.AgentOutput{
+									MessageOutput: &adk.MessageVariant{
+										IsStreaming: false,
+										Message:     msg,
+										Role:        curRole,
+										ToolName:    curTool,
+									},
+								},
+							})
+							continue
+						}
+					}
+
 					// Start a new stream when role changes or a new tool call begins
 					if curWriter == nil || msg.Role != curRole || (msg.Role == schema.Tool && msg.ToolName != curTool) {
 						flush()
@@ -70,6 +94,7 @@ func ConvertToEinoIterator(
 							Output: &adk.AgentOutput{
 								MessageOutput: &adk.MessageVariant{
 									IsStreaming:   true,
+									Message:       msg,
 									MessageStream: streamReader,
 									Role:          curRole,
 									ToolName:      curTool,

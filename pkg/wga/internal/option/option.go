@@ -83,14 +83,16 @@ func (f optionFunc) apply(opts *Options) error {
 
 // Options 智能体运行选项。
 type Options struct {
-	RunSession RunSession      // 执行会话标识
-	Workspace  WorkspaceConfig // 工作空间配置
-	Model      ModelConfig     // 模型配置
-	Tools      []ToolConfig    // 工具配置列表（配置文件工具的认证）
-	ExtraTools []ExtraTool     // 额外工具列表（运行时传入）
-	Skills     []Skill         // 技能列表（运行时传入）
-	MCPs       []MCP           // MCP 服务器列表
-	Messages   []adk.Message   // 历史消息 + 当前问题（最后一条 User 消息）
+	RunSession                 RunSession      // 执行会话标识
+	Workspace                  WorkspaceConfig // 工作空间配置
+	Model                      ModelConfig     // 模型配置
+	Tools                      []ToolConfig    // 工具配置列表（配置文件工具的认证）
+	ExtraTools                 []ExtraTool     // 额外工具列表（运行时传入）
+	Skills                     []Skill         // 技能列表（运行时传入）
+	MCPs                       []MCP           // MCP 服务器列表
+	Messages                   []adk.Message   // 历史消息 + 当前问题（最后一条 User 消息）
+	EnableHumanInTheLoop       bool            // 是否启用人机交互
+	EnableHumanInTheLoopCustom bool            // 是否允许用户自定义回答
 }
 
 // Apply 应用选项。
@@ -269,6 +271,18 @@ func WithRunSession(session RunSession) Option {
 func WithMessages(messages []adk.Message) Option {
 	return optionFunc(func(opts *Options) error {
 		opts.Messages = append(opts.Messages, messages...)
+		return nil
+	})
+}
+
+// WithEnableHumanInTheLoop 设置是否启用人机交互。
+// enableCustom 为可选参数，设置是否允许用户自定义回答。
+func WithEnableHumanInTheLoop(enable bool, enableCustom ...bool) Option {
+	return optionFunc(func(opts *Options) error {
+		opts.EnableHumanInTheLoop = enable
+		if len(enableCustom) > 0 {
+			opts.EnableHumanInTheLoopCustom = enableCustom[0]
+		}
 		return nil
 	})
 }

@@ -1,4 +1,5 @@
 agentId: Supervisor Agent
+humanInTheLoop: true
 configPath: configs/microservice/bff-service/configs/wga/config.yaml
 
 agents:

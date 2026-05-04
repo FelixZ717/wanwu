@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/wga"
 	wga_persistent "github.com/UnicomAI/wanwu/pkg/wga-persistent"
+	wga_sandbox "github.com/UnicomAI/wanwu/pkg/wga-sandbox"
 	wga_option "github.com/UnicomAI/wanwu/pkg/wga/wga-option"
 	"github.com/gin-gonic/gin"
 )
@@ -341,4 +343,20 @@ func GeneralAgentConversationChat(ctx *gin.Context, userId, orgId string, req re
 		Messages:       req.Messages,
 		WorkspaceStore: workspaceStore,
 	})
+}
+
+func GeneralAgentReplyQuestion(ctx context.Context, runID string, questionID string, answers [][]string) error {
+	sandboxCfg, err := getWgaSandboxConfig()
+	if err != nil {
+		return err
+	}
+	return wga_sandbox.ReplyQuestion(ctx, sandboxCfg, runID, questionID, answers)
+}
+
+func GeneralAgentRejectQuestion(ctx context.Context, runID string, questionID string) error {
+	sandboxCfg, err := getWgaSandboxConfig()
+	if err != nil {
+		return err
+	}
+	return wga_sandbox.RejectQuestion(ctx, sandboxCfg, runID, questionID)
 }

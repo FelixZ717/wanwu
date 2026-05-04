@@ -24,6 +24,11 @@ const (
 	OpencodeEventTypeSubtask    OpencodeEventType = "subtask"
 	OpencodeEventTypeCompaction OpencodeEventType = "compaction"
 	OpencodeEventTypeError      OpencodeEventType = "error"
+
+	// Question 事件类型（Human-in-the-Loop）
+	OpencodeEventTypeQuestionAsked    OpencodeEventType = "question.asked"
+	OpencodeEventTypeQuestionReplied  OpencodeEventType = "question.replied"
+	OpencodeEventTypeQuestionRejected OpencodeEventType = "question.rejected"
 )
 
 // OpencodeEvent 输出事件结构。
@@ -103,6 +108,32 @@ type errorPart struct {
 // ErrorPart 错误部分（导出）。
 type ErrorPart = errorPart
 
+// questionPart 问题部分（Human-in-the-Loop）。
+type questionPart struct {
+	Type       string         `json:"type"`
+	QuestionID string         `json:"questionId"`
+	SessionID  string         `json:"sessionID"`
+	Questions  []questionItem `json:"questions"`
+	Status     string         `json:"status,omitempty"`
+	Answers    [][]string     `json:"answers,omitempty"`
+}
+
+type questionItem struct {
+	Question string           `json:"question"`
+	Header   string           `json:"header"`
+	Options  []questionOption `json:"options"`
+	Multiple bool             `json:"multiple"`
+	Custom   bool             `json:"custom"`
+}
+
+type questionOption struct {
+	Label       string `json:"label"`
+	Description string `json:"description"`
+}
+
+// QuestionPart 问题部分（导出）。
+type QuestionPart = questionPart
+
 // ============================================================================
 // SSE 事件类型（内部使用）
 //
@@ -161,16 +192,38 @@ type sseSyncEventData struct {
 // message.part.delta: { sessionID, messageID, partID, field, delta }
 // session.idle: { sessionID }
 // session.error: { sessionID?, error }
+// question.asked: { id, sessionID, questions } - 注意：OpenCode 用 "id" 而非 "questionId"
+// question.replied: { sessionID, requestID, answers }
+// question.rejected: { sessionID, requestID }
 type sseEventProps struct {
-	SessionID string         `json:"sessionID,omitempty"`
-	Delta     string         `json:"delta,omitempty"`
-	Part      sseEventPart   `json:"part,omitempty"`
-	Status    sseEventStatus `json:"status,omitempty"`
-	Error     sseEventError  `json:"error,omitempty"`
-	Info      sseEventInfo   `json:"info,omitempty"`
-	MessageID string         `json:"messageID,omitempty"`
-	PartID    string         `json:"partID,omitempty"`
-	Field     string         `json:"field,omitempty"`
+	SessionID string             `json:"sessionID,omitempty"`
+	Delta     string             `json:"delta,omitempty"`
+	Part      sseEventPart       `json:"part,omitempty"`
+	Status    sseEventStatus     `json:"status,omitempty"`
+	Error     sseEventError      `json:"error,omitempty"`
+	Info      sseEventInfo       `json:"info,omitempty"`
+	MessageID string             `json:"messageID,omitempty"`
+	PartID    string             `json:"partID,omitempty"`
+	Field     string             `json:"field,omitempty"`
+	ID        string             `json:"id,omitempty"`        // question.asked: 问题ID（OpenCode用"id"）
+	RequestID string             `json:"requestID,omitempty"` // question.replied/rejected: 请求ID
+	Questions []sseEventQuestion `json:"questions,omitempty"`
+	Answers   [][]string         `json:"answers,omitempty"` // question.replied: 答案
+}
+
+// sseEventQuestion 问题结构（对应 opencode Question）。
+type sseEventQuestion struct {
+	Question string                   `json:"question"`
+	Header   string                   `json:"header"`
+	Options  []sseEventQuestionOption `json:"options"`
+	Multiple bool                     `json:"multiple"`
+	Custom   *bool                    `json:"custom,omitempty"` // 可选字段，缺失时由 EnableHumanInTheLoopCustom 配置决定
+}
+
+// sseEventQuestionOption 问题选项。
+type sseEventQuestionOption struct {
+	Label       string `json:"label"`
+	Description string `json:"description"`
 }
 
 // sseEventInfo 消息信息（对应 opencode MessageV2.Info）。

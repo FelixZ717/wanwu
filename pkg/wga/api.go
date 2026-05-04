@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	wga_sandbox "github.com/UnicomAI/wanwu/pkg/wga-sandbox"
+	wga_sandbox_option "github.com/UnicomAI/wanwu/pkg/wga-sandbox/wga-sandbox-option"
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/config"
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/factory"
 	"github.com/UnicomAI/wanwu/pkg/wga/internal/option"
@@ -101,6 +102,18 @@ func Run(ctx context.Context, id string, opts ...option.Option) (wga_option.RunS
 // Cleanup 清理指定 runID 的沙箱工作目录。
 func Cleanup(ctx context.Context, runID string) error {
 	return wga_sandbox.Cleanup(ctx, runID)
+}
+
+// ReplyQuestion 回答问题（Human-in-the-Loop）。
+// 仅支持 Reuse 模式。
+func ReplyQuestion(ctx context.Context, sandboxCfg wga_sandbox_option.SandboxConfig, runID string, questionID string, answers [][]string) error {
+	return wga_sandbox.ReplyQuestion(ctx, sandboxCfg, runID, questionID, answers)
+}
+
+// RejectQuestion 拒绝问题（Human-in-the-Loop）。
+// 仅支持 Reuse 模式。
+func RejectQuestion(ctx context.Context, sandboxCfg wga_sandbox_option.SandboxConfig, runID string, questionID string) error {
+	return wga_sandbox.RejectQuestion(ctx, sandboxCfg, runID, questionID)
 }
 
 // --- internal ---
