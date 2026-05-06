@@ -28,6 +28,10 @@ func NewClient(ctx context.Context, db *gorm.DB) (*Client, error) {
 		model.BuiltinTool{},
 		model.CustomSkill{},
 		model.AcquiredSkill{},
+		model.CustomSkillVariable{},
+		model.AcquiredSkillVariable{},
+		model.BuiltinSkillVariable{},
+		model.CustomSkillPublish{},
 	); err != nil {
 		return nil, err
 	}

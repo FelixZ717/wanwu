@@ -1,0 +1,260 @@
+package mcp
+
+import (
+	"context"
+
+	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
+	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
+	"github.com/UnicomAI/wanwu/internal/mcp-service/client/model"
+	"github.com/UnicomAI/wanwu/pkg/util"
+	"google.golang.org/protobuf/types/known/emptypb"
+)
+
+func (s *Service) UpdateCustomSkillBasicMeta(ctx context.Context, req *mcp_service.UpdateCustomSkillBasicMetaReq) (*emptypb.Empty, error) {
+	if err := s.cli.UpdateCustomSkillBasicMeta(ctx, req.SkillId, req.Name, req.Desc); err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) UpdateCustomSkillThreadMeta(ctx context.Context, req *mcp_service.UpdateCustomSkillThreadMetaReq) (*emptypb.Empty, error) {
+	if err := s.cli.UpdateCustomSkillThreadMeta(ctx, req.SkillId, req.WgaThreadId, req.PreviewThreadId); err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) CreateCustomSkillVar(ctx context.Context, req *mcp_service.CreateCustomSkillVarReq) (*mcp_service.SkillVariableCreateResp, error) {
+	id, err := s.cli.CreateCustomSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), toCustomSkillVariable(req.SkillId, req.Variable))
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	return &mcp_service.SkillVariableCreateResp{Id: util.Int2Str(id)}, nil
+}
+
+func (s *Service) GetCustomSkillVars(ctx context.Context, req *mcp_service.GetCustomSkillVarsReq) (*mcp_service.CustomSkillVars, error) {
+	variables, err := s.cli.GetCustomSkillVars(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.SkillId)
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	protoVars := make([]*mcp_service.Variable, 0, len(variables))
+	for _, v := range variables {
+		protoVars = append(protoVars, toProtoVariableFromCustom(v))
+	}
+	return &mcp_service.CustomSkillVars{
+		SkillId:   req.SkillId,
+		Variables: protoVars,
+		Total:     int64(len(variables)),
+	}, nil
+}
+
+func (s *Service) UpdateCustomSkillVar(ctx context.Context, req *mcp_service.UpdateCustomSkillVarReq) (*emptypb.Empty, error) {
+	id := util.MustU32(req.GetId())
+	if err := s.cli.UpdateCustomSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id, protoVariableToCustomModel(req.Variable)); err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) DeleteCustomSkillVar(ctx context.Context, req *mcp_service.DeleteCustomSkillVarReq) (*emptypb.Empty, error) {
+	id := util.MustU32(req.GetId())
+	if err := s.cli.DeleteCustomSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id); err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) CreateAcquiredSkillVar(ctx context.Context, req *mcp_service.CreateAcquiredSkillVarReq) (*mcp_service.SkillVariableCreateResp, error) {
+	id, err := s.cli.CreateAcquiredSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), toAcquiredSkillVariable(req.SkillId, req.Variable))
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
+	}
+	return &mcp_service.SkillVariableCreateResp{Id: util.Int2Str(id)}, nil
+}
+
+func (s *Service) GetAcquiredSkillVars(ctx context.Context, req *mcp_service.GetAcquiredSkillVarsReq) (*mcp_service.AcquiredSkillVars, error) {
+	variables, err := s.cli.GetAcquiredSkillVars(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.SkillId)
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
+	}
+	protoVars := make([]*mcp_service.Variable, 0, len(variables))
+	for _, v := range variables {
+		protoVars = append(protoVars, toProtoVariableFromAcquired(v))
+	}
+	return &mcp_service.AcquiredSkillVars{
+		SkillId:   req.SkillId,
+		Variables: protoVars,
+		Total:     int64(len(variables)),
+	}, nil
+}
+
+func (s *Service) UpdateAcquiredSkillVar(ctx context.Context, req *mcp_service.UpdateAcquiredSkillVarReq) (*emptypb.Empty, error) {
+	id := util.MustU32(req.GetId())
+	if err := s.cli.UpdateAcquiredSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id, protoVariableToAcquiredModel(req.Variable)); err != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) DeleteAcquiredSkillVar(ctx context.Context, req *mcp_service.DeleteAcquiredSkillVarReq) (*emptypb.Empty, error) {
+	id := util.MustU32(req.GetId())
+	if err := s.cli.DeleteAcquiredSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id); err != nil {
+		return nil, errStatus(errs.Code_MCPAcquiredSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) CreateBuiltinSkillVar(ctx context.Context, req *mcp_service.CreateBuiltinSkillVarReq) (*mcp_service.SkillVariableCreateResp, error) {
+	id, err := s.cli.CreateBuiltinSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), toBuiltinSkillVariable(req.SkillId, req.Variable))
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPBuiltinSkillErr, err)
+	}
+	return &mcp_service.SkillVariableCreateResp{Id: util.Int2Str(id)}, nil
+}
+
+func (s *Service) UpdateBuiltinSkillVar(ctx context.Context, req *mcp_service.UpdateBuiltinSkillVarReq) (*emptypb.Empty, error) {
+	id := util.MustU32(req.GetId())
+	if err := s.cli.UpdateBuiltinSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id, protoVariableToBuiltinModel(req.Variable)); err != nil {
+		return nil, errStatus(errs.Code_MCPBuiltinSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) DeleteBuiltinSkillVar(ctx context.Context, req *mcp_service.DeleteBuiltinSkillVarReq) (*emptypb.Empty, error) {
+	id := util.MustU32(req.GetId())
+	if err := s.cli.DeleteBuiltinSkillVar(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), id); err != nil {
+		return nil, errStatus(errs.Code_MCPBuiltinSkillErr, err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) GetBuiltinSkillVars(ctx context.Context, req *mcp_service.GetBuiltinSkillVarsReq) (*mcp_service.BuiltinSkillVars, error) {
+	variables, total, err := s.cli.GetBuiltinSkillVars(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.SkillId)
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPBuiltinSkillErr, err)
+	}
+	protoVars := make([]*mcp_service.Variable, 0, len(variables))
+	for _, variable := range variables {
+		protoVars = append(protoVars, toProtoVariableFromBuiltin(variable))
+	}
+	return &mcp_service.BuiltinSkillVars{
+		SkillId:   req.SkillId,
+		Variables: protoVars,
+		Total:     total,
+	}, nil
+}
+
+// --- internal ---
+func toCustomSkillVariable(skillId string, variable *mcp_service.Variable) *model.CustomSkillVariable {
+	if variable == nil {
+		return &model.CustomSkillVariable{SkillID: skillId}
+	}
+	return &model.CustomSkillVariable{
+		SkillID:       skillId,
+		Name:          variable.Name,
+		Desc:          variable.Desc,
+		VariableKey:   variable.VariableKey,
+		VariableValue: variable.VariableValue,
+	}
+}
+
+func protoVariableToCustomModel(variable *mcp_service.Variable) *model.CustomSkillVariable {
+	if variable == nil {
+		return nil
+	}
+	return &model.CustomSkillVariable{
+		Name:          variable.Name,
+		Desc:          variable.Desc,
+		VariableKey:   variable.VariableKey,
+		VariableValue: variable.VariableValue,
+	}
+}
+
+func toAcquiredSkillVariable(skillId string, variable *mcp_service.Variable) *model.AcquiredSkillVariable {
+	if variable == nil {
+		return &model.AcquiredSkillVariable{SkillID: skillId}
+	}
+	return &model.AcquiredSkillVariable{
+		SkillID:       skillId,
+		Name:          variable.Name,
+		Desc:          variable.Desc,
+		VariableKey:   variable.VariableKey,
+		VariableValue: variable.VariableValue,
+	}
+}
+
+func protoVariableToAcquiredModel(variable *mcp_service.Variable) *model.AcquiredSkillVariable {
+	if variable == nil {
+		return nil
+	}
+	return &model.AcquiredSkillVariable{
+		Name:          variable.Name,
+		Desc:          variable.Desc,
+		VariableKey:   variable.VariableKey,
+		VariableValue: variable.VariableValue,
+	}
+}
+
+func toBuiltinSkillVariable(skillId string, variable *mcp_service.Variable) *model.BuiltinSkillVariable {
+	if variable == nil {
+		return &model.BuiltinSkillVariable{SkillID: skillId}
+	}
+	return &model.BuiltinSkillVariable{
+		SkillID:       skillId,
+		Name:          variable.Name,
+		Desc:          variable.Desc,
+		VariableKey:   variable.VariableKey,
+		VariableValue: variable.VariableValue,
+	}
+}
+
+func protoVariableToBuiltinModel(variable *mcp_service.Variable) *model.BuiltinSkillVariable {
+	if variable == nil {
+		return nil
+	}
+	return &model.BuiltinSkillVariable{
+		Name:          variable.Name,
+		Desc:          variable.Desc,
+		VariableKey:   variable.VariableKey,
+		VariableValue: variable.VariableValue,
+	}
+}
+
+func toProtoVariableFromCustom(v *model.CustomSkillVariable) *mcp_service.Variable {
+	if v == nil {
+		return nil
+	}
+	return &mcp_service.Variable{
+		Id:            util.Int2Str(v.ID),
+		Name:          v.Name,
+		Desc:          v.Desc,
+		VariableKey:   v.VariableKey,
+		VariableValue: v.VariableValue,
+	}
+}
+
+func toProtoVariableFromAcquired(v *model.AcquiredSkillVariable) *mcp_service.Variable {
+	if v == nil {
+		return nil
+	}
+	return &mcp_service.Variable{
+		Id:            util.Int2Str(v.ID),
+		Name:          v.Name,
+		Desc:          v.Desc,
+		VariableKey:   v.VariableKey,
+		VariableValue: v.VariableValue,
+	}
+}
+
+func toProtoVariableFromBuiltin(v *model.BuiltinSkillVariable) *mcp_service.Variable {
+	if v == nil {
+		return nil
+	}
+	return &mcp_service.Variable{
+		Id:            util.Int2Str(v.ID),
+		Name:          v.Name,
+		Desc:          v.Desc,
+		VariableKey:   v.VariableKey,
+		VariableValue: v.VariableValue,
+	}
+}

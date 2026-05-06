@@ -36,12 +36,19 @@ func (c *Client) CreateCustomSkill(ctx context.Context, customSkill *model.Custo
 }
 
 func (c *Client) DeleteCustomSkill(ctx context.Context, skillId string) *err_code.Status {
-	if err := sqlopt.SQLOptions(
-		sqlopt.WithID(util.MustU32(skillId)),
-	).Apply(c.db).WithContext(ctx).Delete(&model.CustomSkill{}).Error; err != nil {
-		return toErrStatus("mcp_custom_skill_delete", err.Error())
-	}
-	return nil
+	id := util.MustU32(skillId)
+	return c.transaction(ctx, func(tx *gorm.DB) *err_code.Status {
+		if err := sqlopt.WithSkillID(skillId).Apply(tx).Delete(&model.CustomSkillVariable{}).Error; err != nil {
+			return toErrStatus("mcp_custom_skill_delete_variables", err.Error())
+		}
+		if err := sqlopt.WithSkillID(skillId).Apply(tx).Delete(&model.CustomSkillPublish{}).Error; err != nil {
+			return toErrStatus("mcp_custom_skill_delete_publish", err.Error())
+		}
+		if err := sqlopt.WithID(id).Apply(tx).Delete(&model.CustomSkill{}).Error; err != nil {
+			return toErrStatus("mcp_custom_skill_delete", err.Error())
+		}
+		return nil
+	})
 }
 
 func (c *Client) GetCustomSkill(ctx context.Context, skillId string) (*model.CustomSkill, *err_code.Status) {
@@ -57,6 +64,27 @@ func (c *Client) GetCustomSkill(ctx context.Context, skillId string) (*model.Cus
 	return &cs, nil
 }
 
+// GetCustomSkillIDByWgaThreadID 仅匹配列 wga_thread_id。参数不完整或记录不存在时返回 ("", nil)；仅查询失败返回 Status。
+func (c *Client) GetCustomSkillIDByWgaThreadID(ctx context.Context, userId, orgId, wgaThreadID string) (string, *err_code.Status) {
+	if wgaThreadID == "" || userId == "" || orgId == "" {
+		return "", nil
+	}
+	var cs model.CustomSkill
+	err := sqlopt.SQLOptions(
+		sqlopt.WithUserID(userId),
+		sqlopt.WithOrgID(orgId),
+		sqlopt.WithCustomSkillWgaThreadId(wgaThreadID),
+	).Apply(c.db).WithContext(ctx).Model(&model.CustomSkill{}).First(&cs).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", toErrStatus("mcp_custom_skill_get_by_wga_thread", err.Error())
+	}
+	return util.Int2Str(cs.ID), nil
+}
+
+// GetCustomSkillList 返回的 total：无分页，表示当前筛选条件下全量条数，与 len(list) 一致。
 func (c *Client) GetCustomSkillList(ctx context.Context, userId, orgId, name string) ([]*model.CustomSkill, int64, *err_code.Status) {
 	var list []*model.CustomSkill
 	if err := sqlopt.SQLOptions(
@@ -90,4 +118,30 @@ func (c *Client) GetCustomSkillBySkillIds(ctx context.Context, skillIds []string
 	}
 
 	return list, nil
+}
+
+func (c *Client) UpdateCustomSkillBasicMeta(ctx context.Context, skillId, name, desc string) *err_code.Status {
+	updates := map[string]any{
+		"name": name,
+		"desc": desc,
+	}
+	if err := sqlopt.SQLOptions(
+		sqlopt.WithID(util.MustU32(skillId)),
+	).Apply(c.db).WithContext(ctx).Model(&model.CustomSkill{}).Updates(updates).Error; err != nil {
+		return toErrStatus("mcp_custom_skill_update_basic_meta", skillId, err.Error())
+	}
+	return nil
+}
+
+func (c *Client) UpdateCustomSkillThreadMeta(ctx context.Context, skillId, wgaThreadId, previewThreadId string) *err_code.Status {
+	updates := map[string]any{
+		"wga_thread_id":     wgaThreadId,
+		"preview_thread_id": previewThreadId,
+	}
+	if err := sqlopt.SQLOptions(
+		sqlopt.WithID(util.MustU32(skillId)),
+	).Apply(c.db).WithContext(ctx).Model(&model.CustomSkill{}).Updates(updates).Error; err != nil {
+		return toErrStatus("mcp_custom_skill_update_thread_meta", skillId, err.Error())
+	}
+	return nil
 }

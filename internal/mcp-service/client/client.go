@@ -5,6 +5,7 @@ import (
 
 	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	"github.com/UnicomAI/wanwu/internal/mcp-service/client/model"
+	"github.com/UnicomAI/wanwu/internal/mcp-service/client/orm"
 )
 
 type IClient interface {
@@ -46,13 +47,37 @@ type IClient interface {
 	CreateCustomSkill(ctx context.Context, customSkill *model.CustomSkill) (string, *errs.Status)
 	DeleteCustomSkill(ctx context.Context, skillId string) *errs.Status
 	GetCustomSkill(ctx context.Context, skillId string) (*model.CustomSkill, *errs.Status)
+	// GetCustomSkillIDByWgaThreadID 按 wga_thread_id 匹配；wgaThreadId 或 identity 不完整时返回 ("", nil)；未找到返回 ("", nil)；仅数据库失败返回 Status。
+	GetCustomSkillIDByWgaThreadID(ctx context.Context, userId, orgId, wgaThreadID string) (skillId string, err *errs.Status)
 	GetCustomSkillList(ctx context.Context, userId, orgId, name string) ([]*model.CustomSkill, int64, *errs.Status)
 	GetCustomSkillBySaveIds(ctx context.Context, saveIds []string) ([]*model.CustomSkill, *errs.Status)
 	GetCustomSkillBySkillIds(ctx context.Context, skillIds []string) ([]*model.CustomSkill, *errs.Status)
+	UpdateCustomSkillBasicMeta(ctx context.Context, skillId, name, desc string) *errs.Status
+	UpdateCustomSkillThreadMeta(ctx context.Context, skillId, wgaThreadId, previewThreadId string) *errs.Status
+	CreateCustomSkillVar(ctx context.Context, userId, orgId string, variable *model.CustomSkillVariable) (uint32, *errs.Status)
+	UpdateCustomSkillVar(ctx context.Context, userId, orgId string, id uint32, variable *model.CustomSkillVariable) *errs.Status
+	DeleteCustomSkillVar(ctx context.Context, userId, orgId string, id uint32) *errs.Status
+	GetCustomSkillVars(ctx context.Context, userId, orgId, skillId string) ([]*model.CustomSkillVariable, *errs.Status)
+	PublishCustomSkill(ctx context.Context, publish *model.CustomSkillPublish, snapshot *orm.CustomSkillPublishSnapshot) *errs.Status
+	UpdatePublishCustomSkill(ctx context.Context, skillId, desc string) *errs.Status
+	GetPublishCustomSkillHistoryList(ctx context.Context, skillId string) ([]*model.CustomSkillPublish, int64, *errs.Status)
+	OverwriteCustomSkillDraft(ctx context.Context, skillId, version string) *errs.Status
+	GetPublishCustomSkillDesc(ctx context.Context, skillId string) (*model.CustomSkillPublish, *errs.Status)
+	GetPublishCustomSkillDescBatch(ctx context.Context, skillIdList []string) ([]*model.CustomSkillPublish, *errs.Status)
 
 	//================AcquiredSkill================
 	CreateAcquiredSkill(ctx context.Context, acquiredSkill *model.AcquiredSkill) (string, *errs.Status)
 	DeleteAcquiredSkill(ctx context.Context, acquiredSkillId string) *errs.Status
 	GetAcquiredSkill(ctx context.Context, acquiredSkillId string) (*model.AcquiredSkill, *errs.Status)
 	GetAcquiredSkillList(ctx context.Context, userId, orgId, name string) ([]*model.AcquiredSkill, int64, *errs.Status)
+	CreateAcquiredSkillVar(ctx context.Context, userId, orgId string, variable *model.AcquiredSkillVariable) (uint32, *errs.Status)
+	UpdateAcquiredSkillVar(ctx context.Context, userId, orgId string, id uint32, variable *model.AcquiredSkillVariable) *errs.Status
+	DeleteAcquiredSkillVar(ctx context.Context, userId, orgId string, id uint32) *errs.Status
+	GetAcquiredSkillVars(ctx context.Context, userId, orgId, skillId string) ([]*model.AcquiredSkillVariable, *errs.Status)
+
+	//================BuiltinSkill================
+	CreateBuiltinSkillVar(ctx context.Context, userId, orgId string, variable *model.BuiltinSkillVariable) (uint32, *errs.Status)
+	UpdateBuiltinSkillVar(ctx context.Context, userId, orgId string, id uint32, variable *model.BuiltinSkillVariable) *errs.Status
+	DeleteBuiltinSkillVar(ctx context.Context, userId, orgId string, id uint32) *errs.Status
+	GetBuiltinSkillVars(ctx context.Context, userId, orgId, skillId string) ([]*model.BuiltinSkillVariable, int64, *errs.Status)
 }

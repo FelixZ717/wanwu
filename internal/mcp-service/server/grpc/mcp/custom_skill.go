@@ -12,16 +12,15 @@ import (
 
 func (s *Service) CustomSkillCreate(ctx context.Context, req *mcp_service.CustomSkillCreateReq) (*mcp_service.CustomSkillCreateResp, error) {
 	skillId, err := s.cli.CreateCustomSkill(ctx, &model.CustomSkill{
-		Name:       req.Name,
-		Avatar:     req.Avatar,
-		Author:     req.Author,
-		Desc:       req.Desc,
-		ObjectPath: req.ObjectPath,
-		Markdown:   req.Markdown,
-		SaveId:     req.SaveId,
-		SourceType: req.SourceType,
-		UserID:     req.Identity.UserId,
-		OrgID:      req.Identity.OrgId,
+		Name:            req.Name,
+		Avatar:          req.Avatar,
+		Author:          req.Author,
+		Desc:            req.Desc,
+		SourceType:      req.SourceType,
+		WgaThreadID:     req.WgaThreadId,
+		PreviewThreadID: req.PreviewThreadId,
+		UserID:          req.Identity.UserId,
+		OrgID:           req.Identity.OrgId,
 	})
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
@@ -45,18 +44,35 @@ func (s *Service) CustomSkillGet(ctx context.Context, req *mcp_service.CustomSki
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
 
-	return toCustomSkillInfo(customSkill), nil
+	variables, err := s.cli.GetCustomSkillVars(ctx, customSkill.UserID, customSkill.OrgID, req.SkillId)
+	if err != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+	}
+
+	return toCustomSkillInfo(customSkill, toCustomSkillVariables(variables)), nil
+}
+
+func (s *Service) GetCustomSkillByThreadID(ctx context.Context, req *mcp_service.GetCustomSkillByThreadIDReq) (*mcp_service.GetCustomSkillByThreadIDResp, error) {
+	skillId, st := s.cli.GetCustomSkillIDByWgaThreadID(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.GetWgaThreadId())
+	if st != nil {
+		return nil, errStatus(errs.Code_MCPCustomSkillErr, st)
+	}
+	return &mcp_service.GetCustomSkillByThreadIDResp{SkillId: skillId}, nil
 }
 
 func (s *Service) CustomSkillGetList(ctx context.Context, req *mcp_service.CustomSkillGetListReq) (*mcp_service.CustomSkillGetListResp, error) {
-	customSkills, total, err := s.cli.GetCustomSkillList(ctx, req.Identity.UserId, req.Identity.OrgId, req.Name)
+	customSkills, total, err := s.cli.GetCustomSkillList(ctx, req.GetIdentity().GetUserId(), req.GetIdentity().GetOrgId(), req.Name)
 	if err != nil {
 		return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
 	}
 
 	customSkillList := make([]*mcp_service.CustomSkill, 0, len(customSkills))
 	for _, customSkill := range customSkills {
-		customSkillList = append(customSkillList, toCustomSkillInfo(customSkill))
+		variables, err := s.cli.GetCustomSkillVars(ctx, customSkill.UserID, customSkill.OrgID, util.Int2Str(customSkill.ID))
+		if err != nil {
+			return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+		}
+		customSkillList = append(customSkillList, toCustomSkillInfo(customSkill, toCustomSkillVariables(variables)))
 	}
 
 	return &mcp_service.CustomSkillGetListResp{
@@ -89,7 +105,11 @@ func (s *Service) GetCustomSkillDetailByIdList(ctx context.Context, req *mcp_ser
 
 	skillDetails := make([]*mcp_service.CustomSkill, 0, len(customSkills))
 	for _, customSkill := range customSkills {
-		skillDetails = append(skillDetails, toCustomSkillInfo(customSkill))
+		variables, err := s.cli.GetCustomSkillVars(ctx, customSkill.UserID, customSkill.OrgID, util.Int2Str(customSkill.ID))
+		if err != nil {
+			return nil, errStatus(errs.Code_MCPCustomSkillErr, err)
+		}
+		skillDetails = append(skillDetails, toCustomSkillInfo(customSkill, toCustomSkillVariables(variables)))
 	}
 
 	return &mcp_service.CustomSkillDetailByIdListResp{
@@ -97,19 +117,35 @@ func (s *Service) GetCustomSkillDetailByIdList(ctx context.Context, req *mcp_ser
 	}, nil
 }
 
-func toCustomSkillInfo(customSkill *model.CustomSkill) *mcp_service.CustomSkill {
+func toCustomSkillInfo(customSkill *model.CustomSkill, variables []*mcp_service.Variable) *mcp_service.CustomSkill {
 	if customSkill == nil {
 		return nil
 	}
 	return &mcp_service.CustomSkill{
-		SkillId:    util.Int2Str(customSkill.ID),
-		Name:       customSkill.Name,
-		Avatar:     customSkill.Avatar,
-		Author:     customSkill.Author,
-		Desc:       customSkill.Desc,
-		ObjectPath: customSkill.ObjectPath,
-		Markdown:   customSkill.Markdown,
-		CreatedAt:  customSkill.CreatedAt,
-		UpdatedAt:  customSkill.UpdatedAt,
+		SkillId:         util.Int2Str(customSkill.ID),
+		Name:            customSkill.Name,
+		Avatar:          customSkill.Avatar,
+		Author:          customSkill.Author,
+		Desc:            customSkill.Desc,
+		ObjectPath:      customSkill.ObjectPath,
+		WgaThreadId:     customSkill.WgaThreadID,
+		PreviewThreadId: customSkill.PreviewThreadID,
+		Variables:       variables,
+		CreatedAt:       customSkill.CreatedAt,
+		UpdatedAt:       customSkill.UpdatedAt,
 	}
+}
+
+func toCustomSkillVariables(variables []*model.CustomSkillVariable) []*mcp_service.Variable {
+	ret := make([]*mcp_service.Variable, 0, len(variables))
+	for _, variable := range variables {
+		ret = append(ret, &mcp_service.Variable{
+			Id:            util.Int2Str(variable.ID),
+			Name:          variable.Name,
+			Desc:          variable.Desc,
+			VariableKey:   variable.VariableKey,
+			VariableValue: variable.VariableValue,
+		})
+	}
+	return ret
 }

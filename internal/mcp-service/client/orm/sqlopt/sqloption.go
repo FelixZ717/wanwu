@@ -186,6 +186,15 @@ func WithCustomSkillSourceType(sourceType string) SQLOption {
 	})
 }
 
+func WithCustomSkillWgaThreadId(wgaThreadId string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if wgaThreadId != "" {
+			return db.Where("wga_thread_id = ?", wgaThreadId)
+		}
+		return db
+	})
+}
+
 func WithCustomSkillSkillId(skillIds []string) SQLOption {
 	if len(skillIds) > 0 {
 		return funcSQLOption(func(db *gorm.DB) *gorm.DB {
@@ -193,6 +202,42 @@ func WithCustomSkillSkillId(skillIds []string) SQLOption {
 		})
 	}
 	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		return db
+	})
+}
+
+func WithSkillID(skillID string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if skillID != "" {
+			return db.Where("skill_id = ?", skillID)
+		}
+		return db
+	})
+}
+
+func WithSkillIDs(skillIDs []string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if len(skillIDs) > 0 {
+			return db.Where("skill_id IN ?", skillIDs)
+		}
+		return db
+	})
+}
+
+func WithVariableName(name string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if name != "" {
+			return db.Where("name = ?", name)
+		}
+		return db
+	})
+}
+
+func WithVersion(version string) SQLOption {
+	return funcSQLOption(func(db *gorm.DB) *gorm.DB {
+		if version != "" {
+			return db.Where("version = ?", version)
+		}
 		return db
 	})
 }
