@@ -8,13 +8,14 @@ import (
 var _wga *WgaConfig
 
 type WgaConfig struct {
-	ConfigPath  string               `yaml:"configPath" json:"configPath" mapstructure:"configPath"`
-	AgentID     string               `yaml:"agentId" json:"agentId" mapstructure:"agentId"`
-	Model       WgaModelConfig       `yaml:"model" json:"model" mapstructure:"model"`
-	Persistent  WgaPersistentConfig  `yaml:"persistent" json:"persistent" mapstructure:"persistent"`
-	Tools       []WgaToolConfig      `yaml:"tools" json:"tools" mapstructure:"tools"`
-	SubAgents   []WgaAgentInfo       `yaml:"sub_agents" json:"sub_agents" mapstructure:"sub_agents"`
-	UploadLimit WgaUploadLimitConfig `yaml:"upload_limit" json:"upload_limit" mapstructure:"upload_limit"`
+	ConfigPath     string               `yaml:"configPath" json:"configPath" mapstructure:"configPath"`
+	AgentID        string               `yaml:"agentId" json:"agentId" mapstructure:"agentId"`
+	HumanInTheLoop bool                 `yaml:"humanInTheLoop" json:"humanInTheLoop" mapstructure:"humanInTheLoop"`
+	Model          WgaModelConfig       `yaml:"model" json:"model" mapstructure:"model"`
+	Persistent     WgaPersistentConfig  `yaml:"persistent" json:"persistent" mapstructure:"persistent"`
+	Tools          []WgaToolConfig      `yaml:"tools" json:"tools" mapstructure:"tools"`
+	SubAgents      []WgaAgentInfo       `yaml:"sub_agents" json:"sub_agents" mapstructure:"sub_agents"`
+	UploadLimit    WgaUploadLimitConfig `yaml:"upload_limit" json:"upload_limit" mapstructure:"upload_limit"`
 }
 
 type WgaAgentInfo struct {

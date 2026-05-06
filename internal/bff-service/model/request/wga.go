@@ -186,3 +186,18 @@ func (c *GeneralAgentCopilotRuntimeReq) GetMessages() []GeneralAgentConversation
 
 	return messages
 }
+
+type GeneralAgentReplyQuestionReq struct {
+	RunID      string     `json:"runId" validate:"required"`
+	QuestionID string     `json:"questionId" validate:"required"`
+	Answers    [][]string `json:"answers" validate:"required"`
+}
+
+func (c *GeneralAgentReplyQuestionReq) Check() error { return nil }
+
+type GeneralAgentRejectQuestionReq struct {
+	RunID      string `json:"runId" validate:"required"`
+	QuestionID string `json:"questionId" validate:"required"`
+}
+
+func (c *GeneralAgentRejectQuestionReq) Check() error { return nil }

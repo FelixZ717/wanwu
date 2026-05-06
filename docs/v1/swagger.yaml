@@ -2850,6 +2850,33 @@ definitions:
     - content
     - role
     type: object
+  request.GeneralAgentRejectQuestionReq:
+    properties:
+      questionId:
+        type: string
+      runId:
+        type: string
+    required:
+    - questionId
+    - runId
+    type: object
+  request.GeneralAgentReplyQuestionReq:
+    properties:
+      answers:
+        items:
+          items:
+            type: string
+          type: array
+        type: array
+      questionId:
+        type: string
+      runId:
+        type: string
+    required:
+    - answers
+    - questionId
+    - runId
+    type: object
   request.GetModelRequest:
     properties:
       modelId:
@@ -12585,6 +12612,70 @@ paths:
       security:
       - JWT: []
       summary: 通用智能体MCP下拉接口列表
+      tags:
+      - wga
+  /general/agent/question/reject:
+    post:
+      consumes:
+      - application/json
+      description: 取消智能体提出的问题（Human-in-the-Loop），AI 将收到 RejectedError
+      parameters:
+      - description: 拒绝问题请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GeneralAgentRejectQuestionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功响应
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 拒绝问题
+      tags:
+      - wga
+  /general/agent/question/reply:
+    post:
+      consumes:
+      - application/json
+      description: 回答智能体提出的问题（Human-in-the-Loop），解除 AI 阻塞等待
+      parameters:
+      - description: 回答问题请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.GeneralAgentReplyQuestionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功响应
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - JWT: []
+      summary: 回答问题
       tags:
       - wga
   /general/agent/resource/select:

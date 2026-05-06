@@ -67,3 +67,9 @@ func WithRunSession(session RunSession) Option {
 func WithMessages(messages []adk.Message) Option {
 	return option.WithMessages(messages)
 }
+
+// WithEnableHumanInTheLoop 设置是否启用人机交互。
+// enableCustom 为可选参数，设置是否允许用户自定义回答。
+func WithEnableHumanInTheLoop(enable bool, enableCustom ...bool) Option {
+	return option.WithEnableHumanInTheLoop(enable, enableCustom...)
+}
