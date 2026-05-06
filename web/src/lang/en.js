@@ -2013,6 +2013,7 @@ export default {
       singleSelect: 'Single Choice',
       multiSelect: 'Multiple Choice',
       questions: 'questions',
+      other: 'Other',
     },
   },
 };

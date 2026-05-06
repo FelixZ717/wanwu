@@ -2266,6 +2266,7 @@ export default {
       singleSelect: '单选',
       multiSelect: '多选',
       questions: '个问题',
+      other: '其他',
     },
   },
 };

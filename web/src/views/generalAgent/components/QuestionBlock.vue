@@ -7,7 +7,9 @@
         <div class="question-icon-wrapper">
           <i class="el-icon-question question-icon"></i>
         </div>
-        <span class="question-title">{{ $t('generalAgent.question.pleaseSelect') }}</span>
+        <span class="question-title">
+          {{ $t('generalAgent.question.pleaseSelect') }}
+        </span>
         <span v-if="questionCount > 1" class="question-count">
           {{ questionCount }} {{ $t('generalAgent.question.questions') }}
         </span>
@@ -25,10 +27,16 @@
       <div v-show="isExpanded" class="question-body">
         <div v-for="(q, index) in questions" :key="index" class="question-item">
           <div class="question-meta">
-            <h4 v-if="q.header" class="question-header-label">{{ q.header }}</h4>
+            <h4 v-if="q.header" class="question-header-label">
+              {{ q.header }}
+            </h4>
             <span class="question-type-badge">
-              <template v-if="q.multiple">{{ $t('generalAgent.question.multiSelect') }}</template>
-              <template v-else>{{ $t('generalAgent.question.singleSelect') }}</template>
+              <template v-if="q.multiple">
+                {{ $t('generalAgent.question.multiSelect') }}
+              </template>
+              <template v-else>
+                {{ $t('generalAgent.question.singleSelect') }}
+              </template>
             </span>
           </div>
           <p class="question-text">{{ q.question }}</p>
@@ -38,36 +46,82 @@
               v-for="opt in q.options"
               :key="opt.label"
               class="option-item"
-              :class="{ selected: isSelected(q, opt.label), disabled: status !== 'pending' }"
+              :class="{
+                selected: isSelected(q, opt.label),
+                disabled: status !== 'pending',
+              }"
               @click="status === 'pending' && selectOption(q, opt.label)"
             >
               <span class="option-indicator">
-                <span v-if="q.multiple" class="checkbox" :class="{ checked: isSelected(q, opt.label) }">
+                <span
+                  v-if="q.multiple"
+                  :class="{ checked: isSelected(q, opt.label) }"
+                  class="checkbox"
+                >
                   <i v-if="isSelected(q, opt.label)" class="el-icon-check"></i>
                 </span>
-                <span v-else class="radio" :class="{ checked: isSelected(q, opt.label) }"></span>
+                <span
+                  v-else
+                  :class="{ checked: isSelected(q, opt.label) }"
+                  class="radio"
+                ></span>
               </span>
               <div class="option-content">
                 <span class="option-label">{{ opt.label }}</span>
-                <span v-if="opt.description" class="option-desc">{{ opt.description }}</span>
+                <span v-if="opt.description" class="option-desc">
+                  {{ opt.description }}
+                </span>
               </div>
             </div>
-          </div>
-
-          <div v-if="q.custom" class="custom-section">
-            <input
-              v-model="customAnswers[index]"
-              class="custom-input"
-              :placeholder="$t('generalAgent.question.customPlaceholder')"
-              :disabled="status !== 'pending'"
-              @input="onCustomInput(index)"
-            />
+            <!-- 自定义输入选项 -->
+            <div
+              v-if="q.custom"
+              :class="{
+                selected: isSelected(q, '__CUSTOM__'),
+                disabled: status !== 'pending',
+              }"
+              class="option-item"
+              @click="status === 'pending' && selectOption(q, '__CUSTOM__')"
+            >
+              <span class="option-indicator">
+                <span
+                  v-if="q.multiple"
+                  :class="{ checked: isSelected(q, '__CUSTOM__') }"
+                  class="checkbox"
+                >
+                  <i
+                    v-if="isSelected(q, '__CUSTOM__')"
+                    class="el-icon-check"
+                  ></i>
+                </span>
+                <span
+                  v-else
+                  :class="{ checked: isSelected(q, '__CUSTOM__') }"
+                  class="radio"
+                ></span>
+              </span>
+              <div class="option-content">
+                <span class="option-label">
+                  {{ $t('generalAgent.question.other') }}
+                </span>
+                <el-input
+                  ref="customInput"
+                  v-model="customAnswers[index]"
+                  :placeholder="$t('generalAgent.question.customPlaceholder')"
+                  class="custom-input-inline"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- 按钮区域（仅 pending 时显示） -->
         <div v-if="status === 'pending'" class="actions">
-          <button class="btn-primary" @click="submitReply" :disabled="!canSubmit">
+          <button
+            :disabled="!canSubmit"
+            class="btn-primary"
+            @click="submitReply"
+          >
             {{ $t('generalAgent.question.submit') }}
           </button>
           <button class="btn-secondary" @click="reject">
@@ -119,19 +173,16 @@ export default {
         const selected = this.selectedOptions[index] || [];
         const custom = this.customAnswers[index];
         const hasCustomInput = custom && custom.trim().length > 0;
-        const hasOptions = q.options && q.options.length > 0;
-        const hasSelection = selected.length > 0;
 
-        // 有选项的情况
-        if (hasOptions) {
-          // 选了选项就可以提交
-          if (hasSelection) return true;
-          // 如果允许自定义输入，且有自定义输入，也可以提交
-          if (q.custom && hasCustomInput) return true;
-          return false;
-        }
-        // 没有选项，只能自定义输入
-        if (q.custom && hasCustomInput) return true;
+        // 过滤掉"__CUSTOM__"标记
+        const filteredSelected = selected.filter(s => s !== '__CUSTOM__');
+        const hasSelection = filteredSelected.length > 0;
+        const hasCustomSelected = selected.includes('__CUSTOM__');
+
+        // 选了普通选项就可以提交
+        if (hasSelection) return true;
+        // 如果选择了且有自定义输入，也可以提交
+        if (hasCustomSelected && hasCustomInput) return true;
         return false;
       });
     },
@@ -148,7 +199,10 @@ export default {
           this.isExpanded = false;
         }
         // 从 pending 变为其他状态时自动收起
-        if (oldVal === 'pending' && (val === 'answered' || val === 'rejected')) {
+        if (
+          oldVal === 'pending' &&
+          (val === 'answered' || val === 'rejected')
+        ) {
           this.isExpanded = false;
         }
       },
@@ -170,23 +224,25 @@ export default {
       answers.forEach((answer, index) => {
         if (this.questions[index]) {
           const q = this.questions[index];
-          const hasOptions = q.options && q.options.length > 0;
-          
-          if (hasOptions) {
-            // 检查答案是否是选项值
-            const optionLabels = q.options.map(opt => opt.label);
-            const isOptionAnswer = answer && answer.every(a => optionLabels.includes(a));
-            
-            if (isOptionAnswer) {
-              // 答案是选项值，设置到 selectedOptions
-              this.$set(this.selectedOptions, index, answer || []);
-            } else if (q.custom && answer && answer[0]) {
-              // 答案是自定义输入，设置到 customAnswers
-              this.$set(this.customAnswers, index, answer[0]);
-            }
-          } else if (q.custom && answer && answer[0]) {
-            // 没有选项，纯自定义输入
-            this.$set(this.customAnswers, index, answer[0]);
+
+          // 检查答案中是否包含自定义输入
+          const optionLabels = q.options.map(opt => opt.label);
+          const customAnswer = answer.find(a => !optionLabels.includes(a));
+          const optionAnswers = answer.filter(a => optionLabels.includes(a));
+
+          // 设置普通选项
+          if (optionAnswers.length > 0) {
+            this.$set(this.selectedOptions, index, optionAnswers);
+          }
+
+          // 如果有自定义输入，设置选项和自定义内容
+          if (customAnswer) {
+            const currentSelected = this.selectedOptions[index] || [];
+            this.$set(this.selectedOptions, index, [
+              ...currentSelected,
+              '__CUSTOM__',
+            ]);
+            this.$set(this.customAnswers, index, customAnswer);
           }
         }
       });
@@ -211,29 +267,63 @@ export default {
       } else {
         this.$set(this.selectedOptions, index, [label]);
       }
-      this.$set(this.customAnswers, index, '');
-    },
-    onCustomInput(index) {
-      const custom = this.customAnswers[index];
-      if (custom && custom.trim().length > 0) {
-        this.$set(this.selectedOptions, index, []);
+
+      // 如果选择的是自定义选项，自动聚焦到输入框
+      if (label === '__CUSTOM__') {
+        this.$nextTick(() => {
+          const customInputs = this.$refs.customInput;
+
+          if (Array.isArray(customInputs)) {
+            // v-for 中的 ref 会返回数组
+            const targetInput = customInputs[index];
+
+            if (targetInput && targetInput.$el) {
+              const inputElement = targetInput.$el.querySelector('input');
+              if (inputElement) {
+                inputElement.focus();
+              }
+            }
+          } else if (customInputs && customInputs.$el) {
+            // 单个 ref 的情况
+            const inputElement = customInputs.$el.querySelector('input');
+            if (inputElement) {
+              inputElement.focus();
+            }
+          }
+        });
       }
     },
     async submitReply() {
       const answers = this.questions.map((q, index) => {
         const selected = this.selectedOptions[index] || [];
         const custom = this.customAnswers[index];
-        if (selected.length > 0) {
-          return selected;
+
+        // 过滤掉"__CUSTOM__"标记
+        const filteredSelected = selected.filter(s => s !== '__CUSTOM__');
+
+        // 如果选择了且有自定义输入，将自定义内容加入答案
+        if (
+          selected.includes('__CUSTOM__') &&
+          custom &&
+          custom.trim().length > 0
+        ) {
+          return [...filteredSelected, custom.trim()];
         }
-        if (q.custom && custom && custom.trim().length > 0) {
-          return [custom.trim()];
+
+        // 否则返回普通选项
+        if (filteredSelected.length > 0) {
+          return filteredSelected;
         }
+
         return [];
       });
 
       try {
-        await replyQuestion({ runId: this.runId, questionId: this.questionId, answers });
+        await replyQuestion({
+          runId: this.runId,
+          questionId: this.questionId,
+          answers,
+        });
         this.$message.success(this.$t('generalAgent.question.replySuccess'));
         this.$emit('reply', { questionId: this.questionId, answers });
       } catch (error) {
@@ -243,7 +333,10 @@ export default {
     },
     async reject() {
       try {
-        await rejectQuestion({ runId: this.runId, questionId: this.questionId });
+        await rejectQuestion({
+          runId: this.runId,
+          questionId: this.questionId,
+        });
         this.$message.success(this.$t('generalAgent.question.rejectSuccess'));
         this.$emit('reject', { questionId: this.questionId });
       } catch (error) {
@@ -632,27 +725,23 @@ $question-rejected-dark: #dc2626;
   line-height: 1.4;
 }
 
-.custom-section {
-  margin-top: 12px;
-}
+.custom-input-inline {
+  flex: 1;
+  min-width: 0;
+  margin-top: 4px;
 
-.custom-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  font-size: 14px;
-  transition: all 0.2s ease;
+  ::v-deep .el-input__inner {
+    padding: 4px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    background: transparent;
 
-  &:focus {
-    outline: none;
-    border-color: $accent-color;
-    box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1);
-  }
-
-  &:disabled {
-    background: #f3f4f6;
-    cursor: not-allowed;
+    &:focus {
+      border-color: $accent-color !important;
+      box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1);
+    }
   }
 }
 
