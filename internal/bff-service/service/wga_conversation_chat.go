@@ -339,7 +339,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		if err != nil {
 			return nil, err
 		}
-		if agentID != "" {
+		if agentID != config.WgaCfg().AgentID {
 			checkResult, err := wga.CheckToolOptions(ctx.Request.Context(), agentID, toolOpts...)
 			if err != nil {
 				return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("tool options check failed: %v", err))
