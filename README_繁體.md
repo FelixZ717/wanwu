@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/6ceb4269-a861-4545-84db-bad322592156" style="width:45%; height:auto;" />
+  <img src="https://github.com/user-attachments/assets/4788ed8f-eefc-4c19-aa77-7ec776743f3d" style="width:45%; height:auto;" />
 <p>
   <a href="#🚩 核心功能模組">核心功能模組</a> •
   <a href="#x1F3AF; 典型應用場景">典型應用場景</a> •
@@ -155,6 +155,9 @@
 
 - **建議配置：**
   - CPU：8核或16核；記憶體：32G；硬碟：200G以上；GPU：不需要
+
+- **模型要求提示：**
+  - 使用 WanwuBot（通用智能體）或一句話創建 Skills 功能時，所選模型在導入時的上下文長度必須 >= 32000
   
 - **Docker安裝（推薦）**
 
@@ -234,18 +237,6 @@
     ```
 
 ------
-
-### 📦 沙箱啟動
-
-萬悟沙箱可用於WanwuBot(通用智能體)、一句話創建 Skills 等功能，需要單獨啟動；注意，WanwuBot、創建 Skills 時選用的模型，在導入時必須指定模型上下文長度 >= 32000
-
-1. 基於上述 Docker 安裝步驟，完成首次運行前的配置
-
-2. 啟動沙箱（以 amd64 為例）
-
-   ```
-   docker compose --env-file .env --env-file .env.image.amd64 -f docker-compose.wga-sandbox.yaml up -d
-   ```
 
 ### ⬆️ 版本升級
 

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/6ceb4269-a861-4545-84db-bad322592156" style="width:45%; height:auto;" />
+  <img src="https://github.com/user-attachments/assets/4788ed8f-eefc-4c19-aa77-7ec776743f3d" style="width:45%; height:auto;" />
 <p>
   <a href="#🚩 Core Function Modules">Core Function Modules</a> •
   <a href="#x1F3AF; Typical Application Scenarios">Typical Application Scenarios</a> •
@@ -152,6 +152,9 @@ The platform has been successfully applied in multiple industries such as **fina
 
 - **Recommended Configuration:**
   - CPU: 8-core or 16-core; RAM: 32GB; Storage: 200GB or more; GPU: Not required.
+
+- **Model Requirements:**
+  - When using WanwuBot (General Agent) or creating Skills with a single command, the selected model must have a context length >= 32000 when importing.
   
 - **Docker Installation (Recommended)**
 
@@ -234,18 +237,6 @@ The platform has been successfully applied in multiple industries such as **fina
     ```
 
 ------
-
-### 📦 Sandbox Startup
-
-The Wanwu sandbox can be used for features like WanwuBot(General Agent), creating Skills with a single command and needs to be started separately; note that when using WanwuBot, creating Skills, the selected model must have a context length >= 32000 when importing.
-
-1. Based on the above Docker installation steps, complete the configuration before the first run
-
-2. Start the sandbox (taking amd64 as an example)
-
-   ```
-   docker compose --env-file .env --env-file .env.image.amd64 -f docker-compose.wga-sandbox.yaml up -d
-   ```
 
 ### ⬆️ Version Upgrade
 

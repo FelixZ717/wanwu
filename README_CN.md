@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/6ceb4269-a861-4545-84db-bad322592156" style="width:45%; height:auto;" />
+  <img src="https://github.com/user-attachments/assets/4788ed8f-eefc-4c19-aa77-7ec776743f3d" style="width:45%; height:auto;" />
 <p>
   <a href="#🚩 核心功能模块">核心功能模块</a> •
   <a href="#x1F3AF; 典型应用场景">典型应用场景</a> •
@@ -166,7 +166,10 @@
   - v0.2.0开始：[wanwu-workflow](https://github.com/UnicomAI/wanwu-workflow/tree/dev/wanwu-backend) 项目
 
 - **推荐配置：**
-  - CPU：8核或16核 ；内存：32G ；硬盘200G以上；GPU不需要
+  - CPU：8核或16核；内存：32G；硬盘200G以上；GPU不需要
+
+- **模型要求提示：**
+  - 使用 WanwuBot（通用智能体）或一句话创建 Skills 功能时，所选模型在导入时的上下文长度必须 >= 32000
   
 - **Docker安装（推荐）**
 
@@ -249,18 +252,6 @@
     ```
 
 ------
-
-### 📦 沙箱启动
-
-万悟沙箱可用于WanwuBot(通用智能体)、一句话创建Skills等功能，需要单独启动；注意，WanwuBot、创建Skills时选用的模型，在导入时必须指定模型上下文长度 >= 32000
-
-1. 基于上述Docker安装步骤，完成首次运行前的配置
-
-2. 启动沙箱（以amd64为例）
-
-  ```
-  docker compose --env-file .env --env-file .env.image.amd64 -f docker-compose.wga-sandbox.yaml up -d
-  ```
 
 ### ⬆️ 版本升级
 
