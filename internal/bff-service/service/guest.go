@@ -223,6 +223,17 @@ func toPermissions(isAdmin, isSystem bool, perms []*iam_service.Perm) []response
 			if !isSystem && r.Tag == "operation.oauth" {
 				continue
 			}
+			if config.Cfg().Ontology.Enable == 0 {
+				if r.Tag == "ontology" {
+					continue
+				}
+				if r.Tag == "ontology.knowledge_network" {
+					continue
+				}
+				if r.Tag == "ontology.data_source" {
+					continue
+				}
+			}
 			ret = append(ret, response.Permission{
 				Perm: r.Tag,
 				Name: r.Name,
@@ -239,6 +250,17 @@ func toPermissions(isAdmin, isSystem bool, perms []*iam_service.Perm) []response
 		}
 		if r.Tag == "oauth" {
 			continue
+		}
+		if config.Cfg().Ontology.Enable == 0 {
+			if r.Tag == "ontology" {
+				continue
+			}
+			if r.Tag == "ontology.knowledge_network" {
+				continue
+			}
+			if r.Tag == "ontology.data_source" {
+				continue
+			}
 		}
 		for _, perm := range perms {
 			if perm.Perm == r.Tag {

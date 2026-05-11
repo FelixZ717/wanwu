@@ -29,11 +29,20 @@ func Init(r *gin.Engine) {
 	// --- wga ---
 	mid.NewSub("wga", "通用智能体", route.PermNeedCheck, true, true, JWTUser, CheckUserPerm)
 
-	// wga.skill_management
+	// wga.wanwu_bot
 	mid.Sub("wga").NewSub("wanwu_bot", "WanwuBot", route.PermNeedCheck, true, true)
 
-	// OpenClaw
+	// wga.openclaw
 	mid.Sub("wga").NewSub("openclaw", "OpenClaw", route.PermNeedCheck, true, true)
+
+	// --- ontology ---
+	mid.NewSub("ontology", "本体智能体", route.PermNeedCheck, true, true, JWTUser, CheckUserPerm)
+
+	// ontology.knowledge_network
+	mid.Sub("ontology").NewSub("knowledge_network", "知识网络", route.PermNeedCheck, true, true)
+
+	// ontology.data_source
+	mid.Sub("ontology").NewSub("data_source", "数据连接", route.PermNeedCheck, true, true)
 
 	// --- model ---
 	mid.NewSub("model", "模型服务", route.PermNeedCheck, true, true, JWTUser, CheckUserPerm)
