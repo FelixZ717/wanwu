@@ -62,7 +62,13 @@ func GetToolBoxDetail(ctx *gin.Context, userID, orgID string, req *request.ToolB
 		return nil, err
 	}
 	if req.ToolID != "" {
-		tools = filterToolsByID(tools, req.ToolID)
+		filtered := make([]response.ToolBoxToolItem, 0, 1)
+		for _, t := range tools {
+			if t.ToolID == req.ToolID {
+				filtered = append(filtered, t)
+			}
+		}
+		tools = filtered
 	}
 	return &response.ToolBoxDetail{
 		Total:      len(tools),
@@ -133,8 +139,8 @@ func fetchToolBoxSource(ctx *gin.Context, userID, orgID, boxID, boxType string) 
 
 // --- internal ---
 
-// docContext OpenAPI 文档级别共享上下文（同一 box 内多个 action 复用）
-type docContext struct {
+// toolBoxDocContext OpenAPI 文档级别共享上下文（同一 box 内多个 action 复用）
+type toolBoxDocContext struct {
 	version    string
 	serverURL  string
 	components any
@@ -157,9 +163,13 @@ func parseSchema2ToolBoxItems(ctx context.Context, src toolBoxSource) ([]respons
 	}
 	rawPaths, _ := raw["paths"].(map[string]any)
 
-	docCtx := docContext{
+	serverURL := ""
+	if doc != nil && len(doc.Servers) > 0 {
+		serverURL = doc.Servers[0].URL
+	}
+	docCtx := toolBoxDocContext{
 		version:    doc.Info.Version,
-		serverURL:  firstServerURL(doc),
+		serverURL:  serverURL,
 		components: raw["components"],
 	}
 
@@ -177,15 +187,15 @@ func parseSchema2ToolBoxItems(ctx context.Context, src toolBoxSource) ([]respons
 			continue
 		}
 		rawPathItem, _ := rawPaths[path].(map[string]any)
-		tools = append(tools, buildToolItemsForPath(pathItem, rawPathItem, path, docCtx, src, usedIDs)...)
+		tools = append(tools, buildToolBoxItemsForPath(pathItem, rawPathItem, path, docCtx, src, usedIDs)...)
 	}
 	return tools, nil
 }
 
-// buildToolItemsForPath 把单个 path 下的所有 HTTP method 摊平成 tools[] 元素。
+// buildToolBoxItemsForPath 把单个 path 下的所有 HTTP method 摊平成 tools[] 元素。
 // method 来自 pathItem.Operations()（大写）；raw schema 里 method key 是小写，需要做一次大小写映射。
-func buildToolItemsForPath(pathItem *openapi3.PathItem, rawPathItem map[string]any, path string,
-	doc docContext, src toolBoxSource, usedIDs map[string]int) []response.ToolBoxToolItem {
+func buildToolBoxItemsForPath(pathItem *openapi3.PathItem, rawPathItem map[string]any, path string,
+	doc toolBoxDocContext, src toolBoxSource, usedIDs map[string]int) []response.ToolBoxToolItem {
 	ops := pathItem.Operations()
 	methods := make([]string, 0, len(ops))
 	for m := range ops {
@@ -198,20 +208,43 @@ func buildToolItemsForPath(pathItem *openapi3.PathItem, rawPathItem map[string]a
 		if rawOp == nil {
 			continue
 		}
-		out = append(out, buildToolItem(rawOp, path, method, doc, src, usedIDs))
+		out = append(out, buildToolBoxItem(rawOp, path, method, doc, src, usedIDs))
 	}
 	return out
 }
 
-func buildToolItem(op map[string]any, path, method string, doc docContext, src toolBoxSource, usedIDs map[string]int) response.ToolBoxToolItem {
-	operationID := pickOperationID(op, path, method)
-	toolID := uniqueToolID(operationID, usedIDs)
+func buildToolBoxItem(op map[string]any, path, method string, doc toolBoxDocContext, src toolBoxSource, usedIDs map[string]int) response.ToolBoxToolItem {
+	// 取 operationId，空则用 method_path 兜底
+	operationID, _ := op["operationId"].(string)
+	if operationID == "" {
+		operationID = fmt.Sprintf("%s_%s", strings.ToLower(method), strings.Trim(path, "/"))
+		operationID = strings.NewReplacer("/", "_", "{", "", "}", "").Replace(operationID)
+	}
+	// 同一 box 内若 operationId 重复，追加 _2 / _3 后缀
+	toolID := operationID
+	if n, ok := usedIDs[operationID]; ok {
+		toolID = fmt.Sprintf("%s_%d", operationID, n+1)
+		usedIDs[operationID] = n + 1
+	} else {
+		usedIDs[operationID] = 1
+	}
+
 	desc, _ := op["description"].(string)
 	summary, _ := op["summary"].(string)
-	description := firstNonEmpty(desc, summary)
+	description := desc
+	if description == "" {
+		description = summary
+	}
 	params, _ := op["parameters"].([]any)
 	if params == nil {
 		params = []any{}
+	}
+	tagsRaw, _ := op["tags"].([]any)
+	tags := make([]string, 0, len(tagsRaw))
+	for _, v := range tagsRaw {
+		if s, ok := v.(string); ok {
+			tags = append(tags, s)
+		}
 	}
 
 	return response.ToolBoxToolItem{
@@ -234,11 +267,11 @@ func buildToolItem(op map[string]any, path, method string, doc docContext, src t
 			APISpec: response.ToolBoxAPISpec{
 				Parameters:   params,
 				RequestBody:  op["requestBody"],
-				Responses:    openapiResponsesToArray(op["responses"]),
+				Responses:    toolBoxOpenapiResponsesToArray(op["responses"]),
 				Components:   doc.components,
 				Callbacks:    op["callbacks"],
 				Security:     op["security"],
-				Tags:         stringSliceAt(op, "tags"),
+				Tags:         tags,
 				ExternalDocs: op["externalDocs"],
 			},
 		},
@@ -251,17 +284,6 @@ func buildToolItem(op map[string]any, path, method string, doc docContext, src t
 		ExtendInfo:       map[string]any{},
 		ResourceObject:   "tool",
 	}
-}
-
-// filterToolsByID 按 action 的 tool_id 精确过滤
-func filterToolsByID(tools []response.ToolBoxToolItem, toolID string) []response.ToolBoxToolItem {
-	out := make([]response.ToolBoxToolItem, 0, 1)
-	for _, t := range tools {
-		if t.ToolID == toolID {
-			out = append(out, t)
-		}
-	}
-	return out
 }
 
 // toToolBoxAPIAuth 把下游 common.ApiAuthWebRequest 转成对外的 snake_case 结构
@@ -278,30 +300,9 @@ func toToolBoxAPIAuth(a *common.ApiAuthWebRequest) response.ToolBoxAPIAuth {
 	}
 }
 
-// pickOperationID 取 operationId，空则用 method_path 兜底
-func pickOperationID(op map[string]any, path, method string) string {
-	id, _ := op["operationId"].(string)
-	if id != "" {
-		return id
-	}
-	id = fmt.Sprintf("%s_%s", strings.ToLower(method), strings.Trim(path, "/"))
-	return strings.NewReplacer("/", "_", "{", "", "}", "").Replace(id)
-}
-
-// uniqueToolID 同一 box 内若 operationId 重复，追加 _2 / _3 后缀
-func uniqueToolID(id string, used map[string]int) string {
-	n, ok := used[id]
-	if !ok {
-		used[id] = 1
-		return id
-	}
-	used[id] = n + 1
-	return fmt.Sprintf("%s_%d", id, n+1)
-}
-
-func openapiResponsesToArray(raw any) []response.ToolBoxResponseItem {
-	out := []response.ToolBoxResponseItem{}
+func toolBoxOpenapiResponsesToArray(raw any) []response.ToolBoxResponseItem {
 	m, _ := raw.(map[string]any)
+	out := make([]response.ToolBoxResponseItem, 0, len(m))
 	if m == nil {
 		return out
 	}
@@ -323,31 +324,4 @@ func openapiResponsesToArray(raw any) []response.ToolBoxResponseItem {
 		})
 	}
 	return out
-}
-
-func firstServerURL(doc *openapi3.T) string {
-	if doc == nil || len(doc.Servers) == 0 {
-		return ""
-	}
-	return doc.Servers[0].URL
-}
-
-func stringSliceAt(m map[string]any, key string) []string {
-	raw, _ := m[key].([]any)
-	out := make([]string, 0, len(raw))
-	for _, v := range raw {
-		if s, ok := v.(string); ok {
-			out = append(out, s)
-		}
-	}
-	return out
-}
-
-func firstNonEmpty(ss ...string) string {
-	for _, s := range ss {
-		if s != "" {
-			return s
-		}
-	}
-	return ""
 }

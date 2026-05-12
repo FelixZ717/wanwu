@@ -137,7 +137,7 @@ func buildWgaOntologyKnowledgeOptions(ctx *gin.Context, userId, orgId, agentId s
 		}, nil
 	}
 
-	// 非 Ontology Agent 模式：可用于本体知识网络问数，确定知识网络 ID：@提及 > 配置表 > 无配置则只返回 userId 提示
+	// 非 Ontology Agent 模式：可用于本体知识网络问数，确定知识网络 ID：@提及 > 配置表 > 无配置则只返回 userId 提示；最多只有一个知识网络 ID
 	var ontologyKnowledgeId string
 	if len(ontologyKnowledgeMentions) > 0 {
 		ontologyKnowledgeId = ontologyKnowledgeMentions[0].OntologyKnowledgeId
