@@ -348,7 +348,7 @@ export default {
     };
     const checkPhone = (rule, value, callback) => {
       let reg = /^1[3-9][0-9]{9}$/;
-      if (!reg.test(value)) {
+      if (value && !reg.test(value)) {
         callback(new Error(this.$t('user.dialog.phoneError')));
       } else {
         return callback();
@@ -414,14 +414,7 @@ export default {
             trigger: 'blur',
           },
         ],
-        phone: [
-          {
-            required: true,
-            message: this.$t('common.input.placeholder'),
-            trigger: 'blur',
-          },
-          { validator: checkPhone, trigger: 'blur' },
-        ],
+        phone: [{ validator: checkPhone, trigger: 'blur' }],
         email: [
           // { required: true, message: this.$t('common.input.placeholder'), trigger: 'blur' },
           {
@@ -436,6 +429,16 @@ export default {
             message: this.$t('common.hint.remarkLimit'),
             trigger: 'blur',
           },
+        ],
+      },
+      userPhoneRules: {
+        phone: [
+          {
+            required: true,
+            message: this.$t('common.input.placeholder'),
+            trigger: 'blur',
+          },
+          { validator: checkPhone, trigger: 'blur' },
         ],
       },
       inviteRules: {
@@ -469,7 +472,7 @@ export default {
     handleCommand(command) {
       switch (command) {
         case 'onceAdd':
-          this.preInsert();
+          this.preUpdate();
           break;
         case 'batchAdd':
           this.showBatchAddDialog();
@@ -544,22 +547,26 @@ export default {
       this.$refs.form.resetFields();
       this.dialogVisible = false;
     },
-    preInsert() {
-      this.isEdit = false;
-      this.row = {};
-      this.setFormValue();
-      this.dialogVisible = true;
-    },
     preUpdate(row) {
-      this.row = row;
-      this.isEdit = true;
-      const curOrg = row.orgs ? row.orgs[0] || {} : {};
-      this.setFormValue({
-        ...row,
-        roleIds: curOrg.roles && curOrg.roles[0] ? curOrg.roles[0].id : '',
-      });
-
+      this.row = row || {};
+      this.isEdit = Boolean(row);
+      if (row) {
+        const curOrg = row.orgs ? row.orgs[0] || {} : {};
+        this.setFormValue({
+          ...row,
+          roleIds: curOrg.roles && curOrg.roles[0] ? curOrg.roles[0].id : '',
+        });
+      } else {
+        this.setFormValue();
+      }
+      const commonInfo = this.$store.state.user.commonInfo.data || {};
+      this.rules = commonInfo.userPhoneRequired
+        ? { ...this.rules, ...this.userPhoneRules }
+        : this.rules;
       this.dialogVisible = true;
+      this.$nextTick(() => {
+        this.$refs.form && this.$refs.form.clearValidate();
+      });
     },
     preDel(row) {
       this.$confirm(
