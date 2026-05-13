@@ -50,6 +50,8 @@ func getOntologyKnowledgeSelect(ctx *gin.Context, userId, orgId, name string) ([
 	queryParams := map[string]string{
 		"direction": "desc",
 		"sort":      "update_time",
+		"offset":    "0",
+		"limit":     "999", // 默认拉取前999条，满足大部分场景需求
 	}
 	if name != "" {
 		queryParams["name"] = name
@@ -157,12 +159,9 @@ func buildWgaOntologyKnowledgeOptions(ctx *gin.Context, userId, orgId, agentId s
 	var opts []wga_option.Option
 	if len(smartSkills) > 0 {
 		_, _ = contentBuilder.WriteString("\n\n已加载以下数据查询相关技能，可以使用这些技能访问知识网络中的数据：")
-		for _, s := range smartSkills {
-			_, _ = fmt.Fprintf(&contentBuilder, "\n- %s: %s", s.Name, s.Desc)
-		}
-
 		opts = make([]wga_option.Option, 0, len(smartSkills))
 		for _, s := range smartSkills {
+			_, _ = fmt.Fprintf(&contentBuilder, "\n- %s: %s", s.Name, s.Desc)
 			opts = append(opts, wga_option.WithSkill(wga_option.Skill{
 				Dir: s.SkillPath,
 			}))
