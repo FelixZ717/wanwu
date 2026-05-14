@@ -24,7 +24,7 @@
         <div class="popover-list">
           <div
             v-for="(item, index) in currentFilteredList"
-            :key="`${item._resourceType}_${item.id || item.name}_${index}`"
+            :key="`${item.resourceType}_${item.id || item.name}_${index}`"
             class="popover-item"
             :class="{ selected: index === selectedIndex }"
             @click="selectConfigItem(item)"
@@ -39,10 +39,10 @@
               <div class="item-name-wrapper">
                 <span class="item-name">{{ item.name }}</span>
                 <span
-                  v-if="popoverTab === 'all' && item._resourceType"
+                  v-if="popoverTab === 'all' && item.resourceType"
                   class="tag"
                 >
-                  {{ $t(`generalAgent.config.${item._resourceType}`) }}
+                  {{ $t(`generalAgent.config.${item.resourceType}`) }}
                 </span>
               </div>
               <div v-if="item.author" class="item-desc">
@@ -101,6 +101,7 @@ export default {
       mentionSearchText: '',
       selectedIndex: 0,
       sender: null,
+      ontologyId: null, // ontology单选
     };
   },
   computed: {
@@ -118,7 +119,7 @@ export default {
         // 为每个item添加type标识
         const itemsWithType = list.map(item => ({
           ...item,
-          _resourceType: type,
+          resourceType: type,
         }));
         allList.push(...itemsWithType);
       });
@@ -242,11 +243,10 @@ export default {
         if (this.showConfigPopover) {
           this.updateMentionPosition();
           this.$nextTick(() => {
+            if (this.mentionStartPos === -1) return;
             const allList = this.filterList(this.allResourcesList);
             if (allList.length === 0) {
               this.showConfigPopover = false;
-            } else {
-              this.$refs.configPopover?.updatePopper();
             }
           });
         }
@@ -269,6 +269,7 @@ export default {
           const { instance, offset } = this.sender.getCurrentNode();
           if (instance?.type !== 'Write') return;
           if (instance.text[offset - 1] !== '@') return;
+          this.popoverTab = 'all';
           this.updateMentionPosition();
           this.showConfigPopover = true;
           this.selectedIndex = 0;
@@ -292,7 +293,9 @@ export default {
       const lastAtIndex = currentText.substring(0, offset).lastIndexOf('@');
 
       this.mentionStartPos = lastAtIndex;
-      this.mentionSearchText = currentText.substring(lastAtIndex + 1, offset);
+      if (this.mentionStartPos === -1) this.resetMentionState();
+      else
+        this.mentionSearchText = currentText.substring(lastAtIndex + 1, offset);
     },
 
     handleSenderKeydown(e) {
@@ -305,7 +308,8 @@ export default {
           ArrowDown: () => this.handleKeyboardNavigation('ArrowDown'),
           ArrowLeft: () => this.handleTabSwitch('ArrowLeft'),
           ArrowRight: () => this.handleTabSwitch('ArrowRight'),
-          Enter: () => this.selectCurrentItem(),
+          Enter: () =>
+            this.selectConfigItem(this.currentFilteredList[this.selectedIndex]),
         };
 
         if (keyHandlers[e.key]) {
@@ -330,28 +334,21 @@ export default {
     },
 
     async fetchConfigData() {
-      try {
-        const res = await getGeneralAgentResourceSelect();
+      const res = await getGeneralAgentResourceSelect();
 
-        if (res?.data && Array.isArray(res.data)) {
-          this.resourceList = {};
+      if (res?.data && Array.isArray(res.data)) {
+        this.resourceList = {};
 
-          res.data.forEach(item => {
-            const { listType, list } = item;
-            if (listType && Array.isArray(list)) {
-              this.resourceList[listType] = list;
-            }
-          });
-        }
-      } catch (error) {
-        console.error('获取配置数据失败:', error);
+        res.data.forEach(item => {
+          const { listType, list } = item;
+          if (listType && Array.isArray(list)) {
+            this.resourceList[listType] = list.map(resource => ({
+              ...resource,
+              resourceType: listType,
+            }));
+          }
+        });
       }
-    },
-
-    selectCurrentItem() {
-      if (this.currentFilteredList.length === 0 || this.selectedIndex < 0)
-        return;
-      this.selectConfigItem(this.currentFilteredList[this.selectedIndex]);
     },
 
     handleKeyboardNavigation(key) {
@@ -385,21 +382,30 @@ export default {
     },
 
     selectConfigItem(item) {
-      if (!this.inputValue || this.mentionStartPos === -1) return;
-
       this.sender.backspace(-(this.mentionSearchText.length + 1));
 
       this.sender.setMention({
         id: item.id,
         name: item.name + ' ', // @Amap-高德地图 帮我查询一下西安钟楼到大雁塔的骑行路线
-        type: this.popoverTab,
       });
 
       this.resetMentionState();
+
+      if (item.resourceType === 'ontology') {
+        if (this.ontologyId) {
+          // 如果已存在 ontology 提及，先删除它
+          this.$message.warning(
+            this.$t('generalAgent.config.ontologySingleWarning'),
+          );
+          this.sender.removeMention([this.ontologyId]);
+        }
+        this.ontologyId = item.id;
+      }
     },
 
     clear() {
       this.sender.reset();
+      this.ontologyId = null;
     },
   },
   mounted() {
