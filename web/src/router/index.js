@@ -121,9 +121,9 @@ const constantRoutes = [
         meta: { perm: [PERMS.SKILL] },
       },
       {
-        path: '/skill/create',
+        path: '/skill/workshop',
         component: resolve =>
-          require(['@/views/templateSquare/skills/custom/create.vue'], resolve),
+          require(['@/views/templateSquare/skills/skillWorkshop.vue'], resolve),
         meta: { perm: [PERMS.SKILL] },
       },
       {
@@ -209,12 +209,6 @@ const constantRoutes = [
         path: '/agent/promptCompare/:id',
         component: resolve =>
           require(['@/views/agent/components/prompt/compare'], resolve),
-        meta: { perm: [PERMS.AGENT] },
-      },
-      {
-        path: '/agent/templateDetail',
-        name: 'templateDetail',
-        component: resolve => require(['@/components/agentDetail'], resolve),
         meta: { perm: [PERMS.AGENT] },
       },
       {

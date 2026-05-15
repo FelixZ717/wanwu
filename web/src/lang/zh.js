@@ -194,6 +194,7 @@ export default {
       tip: '提示',
       download: '下载',
       retry: '重试',
+      convertToSkill: '转化为Skill',
     },
     switch: {
       start: '开启',
@@ -358,7 +359,12 @@ export default {
     detail: {
       backText: '返回Skill广场',
       otherSkill: '其他Skill查看',
+      apiKeyEmptyTips:
+        '请仔细阅读以下文档，若需配置变量，请发送到资源库，进行配置后使用',
+      apiKeyEmptyTips_builtin:
+        '请仔细阅读以下文档，若需配置变量，请到资源库进行配置后使用',
     },
+    builtin: '内置',
   },
   uploadDialog: {
     title: '文件上传',
@@ -743,6 +749,7 @@ export default {
     skills: {
       name: 'skill',
       app: {
+        builtin: '内置',
         myAdded: '我添加的',
         myCreated: '我创建的',
         addText: '创建自定义Skills',
@@ -764,6 +771,15 @@ export default {
         uploadPlaceholder: '选择上传文件',
         uploadTips: '只能上传zip格式文件，文件大小不能超过20M',
         authorPlaceholder: '请填写作者名称',
+        convertTitle: '转换Skill',
+        model: '模型',
+        modelPlaceholder: '请选择模型',
+        authorRequired: '请输入作者',
+        modelRequired: '请选择模型',
+        missingTarget: '缺少转化对象信息',
+        invalidModel: '请选择有效的模型',
+        convertStart: '转换开始！',
+        convertFailed: '转换失败',
       },
       formRules: {
         avatar: '请上传图标',
@@ -773,6 +789,26 @@ export default {
         zipSize: '文件大小不能超过20M',
         zipUrl: '请上传文件',
         zipCheckFailed: '文件校验失败，请重新上传',
+      },
+      apiKeyConfig: {
+        title: '变量配置',
+        table: {
+          name: '名称',
+          desc: '描述',
+          variableKey: '变量名',
+          variableValue: '变量值',
+          operation: '操作',
+          emptyText: '暂无变量配置，请点击按钮新增',
+        },
+        button: {
+          add: '新建变量',
+        },
+        placeholder: {
+          name: '请输入名称',
+          desc: '请输入描述',
+          variableKey: '请输入变量名',
+          variableValue: '请输入变量值',
+        },
       },
     },
   },
@@ -785,7 +821,7 @@ export default {
     noChatName: '请输入对话流名称',
     chatNameLimit: '名称须在30字符以内',
     noChatDesc: '请输入对话流描述',
-    chatDescLimit: '对话流描述须在600字符以内',
+    chatDescLimit: '对话流描述须在200字符以内',
     chatPic: '对话流图标',
     chatName: '对话流名称',
     chatDesc: '对话流描述',
@@ -828,7 +864,7 @@ export default {
     enNameRules: '请填写工作流英文名',
     enNameErrorRules: '仅支持英文、数字、下划线，并以英文字母开头',
     pluginDescRules: '请填写工作流描述',
-    pluginLimitRules: '工作流描述须在600字符以内',
+    pluginLimitRules: '工作流描述须在200字符以内',
     createSuccess: '创建成功',
     publishPlugins: '发布工作流',
     pluginField: '工作流领域',
@@ -1637,14 +1673,14 @@ export default {
       send: {
         title: '添加MCP服务',
       },
-      sendHint1: '* 将MCP发送到资源库后，您可在工作流或智能体中直接调用。',
-      sendHint2: '* 您已添加到资源库，可直接在工作流或智能体中直接调用。',
+      sendHint1: '将MCP发送到资源库后，您可在工作流或智能体中直接调用。',
+      sendHint2: '您已添加到资源库，可直接在工作流或智能体中直接调用。',
 
       tool: {
         info: '工具介绍：',
         desc: '描述：',
         params: '参数说明：',
-        setup: '安装说明：',
+        setup: '安装说明',
         cursor: {
           title: '在 Cursor 中安装',
           step1: "1. 点击Cursor右上角'设置'，进入左侧菜单中的'MCP'选项",
@@ -1870,7 +1906,7 @@ export default {
     callCount: '模型调用次数',
     frequency: '次',
     callFailure: '模型调用失败次数',
-    failureRate: '失败率',
+    failureRate: '失败率 (%)',
     promptTokens: '输入Tokens',
     quantity: '个',
     completionTokens: '输出Tokens',
@@ -2140,9 +2176,11 @@ export default {
     header: {
       welcomeTitle: '你好，我是万悟',
       config: '配置',
+      importSkill: '导入Skill',
       uploadFile: '上传文件',
       footer: '通用智能体 · 内容由 AI 生成，仅供参考',
       placeholder: '选择一款模型，和我对话吧。可以试试@，快捷调用工具',
+      workspace: '工作空间',
     },
     message: {
       reasoning: '【思考过程】\n',
@@ -2210,6 +2248,7 @@ export default {
       apiKeyRequired: 'API Key 不能为空',
       apiKeySaveSuccess: 'API Key 保存成功',
       apiKeySaveFailed: '保存失败，请重试',
+      ontologySingleWarning: '本体智能体只能选择一个，已自动替换为最新选择',
       conditionLabels: {
         none: '无要求',
         optional: '可选（至少选一个）',
@@ -2257,6 +2296,22 @@ export default {
       workspaceZip: '工作空间.zip',
       downloadWorkspaceFailed: '下载工作空间失败:',
       confirmDeleteConversation: '确定要删除这个对话吗？',
+    },
+    skill: {
+      selectModelFirst: '请选择一个模型',
+      panel: {
+        preview: '预览',
+        variableConfig: '变量配置',
+      },
+      preview: {
+        placeholder: '请输入内容',
+      },
+      importPrompt: '开始处理这个技能',
+      convertPrompt: '开始处理这个技能',
+      defaultPrompt: '开始处理这个技能',
+      convertTypeError: '该类型不支持转化为技能',
+      invalidSkill: '无效的技能 ID',
+      loadDetailError: '获取技能详情失败',
     },
     question: {
       pleaseSelect: '请选择',
