@@ -3,7 +3,6 @@ package agent_chat_builder
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/agent-service/model"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/response"
+	"github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	utils "github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/cloudwego/eino/schema"
 	"github.com/mark3labs/mcp-go/mcp"

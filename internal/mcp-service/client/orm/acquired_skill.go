@@ -19,12 +19,16 @@ func (c *Client) CreateAcquiredSkill(ctx context.Context, acquiredSkill *model.A
 }
 
 func (c *Client) DeleteAcquiredSkill(ctx context.Context, acquiredSkillId string) *err_code.Status {
-	if err := sqlopt.SQLOptions(
-		sqlopt.WithID(util.MustU32(acquiredSkillId)),
-	).Apply(c.db).WithContext(ctx).Delete(&model.AcquiredSkill{}).Error; err != nil {
-		return toErrStatus("mcp_acquired_skill_delete", err.Error())
-	}
-	return nil
+	id := util.MustU32(acquiredSkillId)
+	return c.transaction(ctx, func(tx *gorm.DB) *err_code.Status {
+		if err := sqlopt.WithSkillID(acquiredSkillId).Apply(tx).Delete(&model.AcquiredSkillVariable{}).Error; err != nil {
+			return toErrStatus("mcp_acquired_skill_delete_variables", err.Error())
+		}
+		if err := sqlopt.WithID(id).Apply(tx).Delete(&model.AcquiredSkill{}).Error; err != nil {
+			return toErrStatus("mcp_acquired_skill_delete", err.Error())
+		}
+		return nil
+	})
 }
 
 func (c *Client) GetAcquiredSkill(ctx context.Context, acquiredSkillId string) (*model.AcquiredSkill, *err_code.Status) {
@@ -40,6 +44,7 @@ func (c *Client) GetAcquiredSkill(ctx context.Context, acquiredSkillId string) (
 	return &as, nil
 }
 
+// GetAcquiredSkillList 返回的 total：无分页，表示当前筛选条件下全量条数，与 len(list) 一致。
 func (c *Client) GetAcquiredSkillList(ctx context.Context, userId, orgId, name string) ([]*model.AcquiredSkill, int64, *err_code.Status) {
 	var list []*model.AcquiredSkill
 	if err := sqlopt.SQLOptions(

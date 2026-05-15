@@ -113,9 +113,9 @@ type CozeListProjectConversationResponse struct {
 }
 
 type CozeProjectConversationItem struct {
-	UniqueID               string `json:"unique_id"`
-	ConversationName       string `json:"conversation_name"`
-	ConversationID         string `json:"conversation_id"`
+	UniqueID                string `json:"unique_id"`
+	ConversationName        string `json:"conversation_name"`
+	ConversationID          string `json:"conversation_id"`
 	ReleaseConversationName string `json:"release_conversation_name"`
 }
 

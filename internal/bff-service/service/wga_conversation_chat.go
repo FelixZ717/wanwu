@@ -11,6 +11,7 @@ import (
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	"github.com/UnicomAI/wanwu/api/proto/common"
 	err_code "github.com/UnicomAI/wanwu/api/proto/err-code"
+	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	ag_ui_util "github.com/UnicomAI/wanwu/pkg/ag-ui-util"
@@ -53,11 +54,17 @@ type WgaChatParams struct {
 	// - 无 workspace：传 nil
 	WorkspaceStore *wga_persistent.Store
 
-	// WorkspaceReadOnly - 工作空间只读模式
+	// WorkspaceReadOnly - 工作空间只读模式（控制文件写入）
 	// - true: 只设置 InputDir，agent 执行产出不写回 workspace
 	// - false: 同时设置 InputDir 和 OutputDir，agent 执行产出写回 workspace
 	// - 仅当 WorkspaceStore 不为 nil 时生效，用户上传文件不受此限制
 	WorkspaceReadOnly bool
+
+	// SendWorkspaceEvent - 是否发送 AG-UI activity workspace event（控制事件通知，与 WorkspaceReadOnly 解耦）
+	// - true: 在 RUN_FINISHED 时发送 workspace activity event 通知前端更新
+	// - false: 不发送 workspace activity event（默认）
+	// - 仅当 WorkspaceStore 不为 nil 时生效
+	SendWorkspaceEvent bool
 }
 
 const (
@@ -176,9 +183,15 @@ func WgaConversationChat(ctx *gin.Context, params *WgaChatParams) error {
 		"forwardedProps": map[string]interface{}{},
 	})
 
+	// 确定 workspace event 注入策略（与 WorkspaceReadOnly 解耦）
+	var eventWorkspaceStore *wga_persistent.Store
+	if params.WorkspaceStore != nil && params.SendWorkspaceEvent {
+		eventWorkspaceStore = params.WorkspaceStore
+	}
+
 	// 异步保存智能体返回的消息
 	go saveWgaChatHistoryEvent(context.Background(), historyEventCh, params.UserID, params.OrgID, params.ThreadID, runID,
-		params.WorkspaceStore,
+		eventWorkspaceStore,
 		lastWorkspaceTotalSize,
 		lastWorkspaceFileCount,
 	)
@@ -189,7 +202,7 @@ func WgaConversationChat(ctx *gin.Context, params *WgaChatParams) error {
 		processedEventCh,
 		params.ThreadID,
 		runID,
-		params.WorkspaceStore,
+		eventWorkspaceStore,
 		lastWorkspaceTotalSize,
 		lastWorkspaceFileCount,
 	)
@@ -475,6 +488,27 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 	opts = append(opts, ontologyOpts...)
 
+	// Skill Preview Agent 模式，需要构建 skill 变量的 schema.Message
+	var skillMessage *schema.Message
+	if agentID == generalAgentSkillChatPreviewAgentID {
+		resp, err := mcp.GetCustomSkillByPreviewID(ctx.Request.Context(), &mcp_service.GetCustomSkillByPreviewIDReq{
+			PreviewThreadId: threadID,
+			Identity: &mcp_service.Identity{
+				UserId: userID,
+				OrgId:  orgID,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if customSkill := resp.GetSkill(); customSkill != nil && len(customSkill.Variables) > 0 {
+			skillMessage = &schema.Message{
+				Role:    schema.System,
+				Content: buildWgaSkillVariablesMessage(customSkill),
+			}
+		}
+	}
+
 	// 历史消息 + @资源提示消息 + 当前用户消息
 	messages, err := filterWgaHistoryMessages(ctx, userID, orgID, threadID)
 	if err != nil {
@@ -482,6 +516,10 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	}
 	if mentionResources.hasResources() {
 		messages = append(messages, buildWgaMentionResourcesMessage(mentionResources))
+	}
+	// 追加技能变量提示消息（仅 Skill Preview Agent 模式）
+	if skillMessage != nil {
+		messages = append(messages, skillMessage)
 	}
 	// 追加Ontology知识网络系统提示消息
 	if ontologyMessage != nil {
