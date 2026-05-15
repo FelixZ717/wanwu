@@ -232,7 +232,7 @@ func (r *Renderer) RenderOperation(doc OperationDocument) string {
 					if field.Required {
 						reqStr = "Yes"
 					}
-						fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n", field.Name, typ, reqStr, field.Description)
+					fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n", field.Name, typ, reqStr, field.Description)
 				}
 				b.WriteString("\n")
 			}
@@ -276,7 +276,7 @@ func (r *Renderer) RenderOperation(doc OperationDocument) string {
 							if field.Required {
 								reqStr = "Yes"
 							}
-								fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n", field.Name, typ, reqStr, field.Description)
+							fmt.Fprintf(&b, "| `%s` | %s | %s | %s |\n", field.Name, typ, reqStr, field.Description)
 						}
 					}
 				}

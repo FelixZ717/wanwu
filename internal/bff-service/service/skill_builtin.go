@@ -1,15 +1,15 @@
 package service
 
 import (
+	"strings"
+
+	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	mcp_service "github.com/UnicomAI/wanwu/api/proto/mcp-service"
 	"github.com/UnicomAI/wanwu/internal/bff-service/config"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/bff-service/model/response"
-	"github.com/gin-gonic/gin"
-	"strings"
-
-	errs "github.com/UnicomAI/wanwu/api/proto/err-code"
 	grpc_util "github.com/UnicomAI/wanwu/pkg/grpc-util"
+	"github.com/gin-gonic/gin"
 )
 
 func GetAgentSkillDetail(ctx *gin.Context, skillId string) (*response.SkillDetail, error) {

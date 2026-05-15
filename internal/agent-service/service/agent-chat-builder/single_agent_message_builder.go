@@ -12,6 +12,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/agent-service/model"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/response"
+	"github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	utils "github.com/UnicomAI/wanwu/pkg/util"
 	"github.com/cloudwego/eino/schema"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -54,7 +55,7 @@ func (*SingleAgentMessageBuilder) FilterMessage(respContext *response.AgentChatR
 	if !respContext.ContentOutput {
 		messageTool := response.CreateMessageTool(chatMessage, respContext)
 		//过滤一些只包含/n的内容
-		if len(chatMessage.ReasoningContent) == 0 && !messageTool.ToolMessage() && !stopMessage(chatMessage) {
+		if len(chatMessage.ReasoningContent) == 0 && !messageTool.ToolMessage() && !util.StopMessage(chatMessage) {
 			//本身大于0 trim之后=0
 			if len(chatMessage.Content) > 0 && len(strings.TrimSpace(strings.Trim(chatMessage.Content, "\n"))) == 0 {
 				return true
@@ -221,16 +222,12 @@ func buildNoToolContent(chatMessage *schema.Message, respContext *response.Agent
 func buildContent(chatMessage *schema.Message) []*response.AgentMessageContent {
 	var retContentList []*response.AgentMessageContent
 	//构造正常内容
-	if len(chatMessage.Content) > 0 || stopMessage(chatMessage) {
+	if len(chatMessage.Content) > 0 || util.StopMessage(chatMessage) {
 		retContentList = append(retContentList, &response.AgentMessageContent{
 			ContentList: []string{chatMessage.Content},
 		})
 	}
 	return retContentList
-}
-
-func stopMessage(chatMessage *schema.Message) bool {
-	return chatMessage.ResponseMeta != nil && chatMessage.ResponseMeta.FinishReason == "stop"
 }
 
 // buildToolContentNewStyle 构造有工具的内容输出-新样式
@@ -290,7 +287,7 @@ func buildNewContentByStep(respContext *response.AgentChatRespContext, req *requ
 		}
 		respContext.ContentOutput = false
 		respContext.IncreaseOrder()
-		agentTool.ToolName = tool.Function.Name
+		agentTool.ToolName = buildToolName(tool.Function.Name, req.ToolMap)
 		agentTool.ToolType = response.BuildEventTypeByTool(agentTool)
 		agentTool.Avatar = buildToolAvatar(tool.Function.Name, req.ToolMap, agentTool.ToolType)
 		subEventData = response.BuildStartTool(agentTool)
@@ -368,6 +365,18 @@ func buildMessageTool(chatMessage *schema.Message, toolId string) *schema.ToolCa
 		}
 	}
 	return nil
+}
+
+// buildToolName 构建工具名称, 从md5转换成正常的工具名称
+func buildToolName(toolName string, toolMap map[string]*request.ToolConfig) string {
+	if len(toolMap) == 0 {
+		return toolName
+	}
+	tool := toolMap[toolName]
+	if tool == nil {
+		return toolName
+	}
+	return tool.ToolName
 }
 
 // buildToolAvatar 构建工具头像

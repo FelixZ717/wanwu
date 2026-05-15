@@ -156,10 +156,10 @@ func buildWgaSkillVariablesMessage(customSkill *mcp_service.CustomSkill) string 
 	// 技能基本信息
 	buf.WriteString("# 当前工作空间技能信息\n\n")
 	if customSkill.Name != "" {
-		buf.WriteString(fmt.Sprintf("**技能名称**: %s\n", customSkill.Name))
+		fmt.Fprintf(&buf, "**技能名称**: %s\n", customSkill.Name)
 	}
 	if customSkill.Desc != "" {
-		buf.WriteString(fmt.Sprintf("**技能描述**: %s\n", customSkill.Desc))
+		fmt.Fprintf(&buf, "**技能描述**: %s\n", customSkill.Desc)
 	}
 	buf.WriteString("\n")
 

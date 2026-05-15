@@ -83,6 +83,7 @@ custom-info:
   register_by_email: 0
   reset_password_by_email: 0
   login_by_email: 0
+  user_phone_required: 0
 
 default-icon:
   user: "/v1/static/icon/user-default-icon.png"
@@ -281,11 +282,12 @@ workflow:
   chatflow_run_by_openapi_uri: /v1/workflow/chat_by_wanwu
   # conversation
   create_chatflow_conversation_uri: /v1/workflow/conversation/create_by_wanwu
-  get_draft_intelligence_list_uri: /api/intelligence_api/search/get_draft_intelligence_list
-  get_draft_intelligence_info_uri: /api/intelligence_api/search/get_draft_intelligence_info
-  get_project_conversation_def: /api/workflow_api/project_conversation/create_by_wanwu
   get_conversation_message_list_uri: /v1/conversation/message/list_by_wanwu
   delete_conversation_uri: /api/workflow_api/project_conversation/delete_by_wanwu
+  get_draft_intelligence_list_uri: /api/intelligence_api/search/get_draft_intelligence_list
+  get_draft_intelligence_info_uri: /api/intelligence_api/search/get_draft_intelligence_info
+  get_project_conversation_uri: /api/workflow_api/project_conversation/create_by_wanwu
+  get_project_conversation_list_uri: /api/workflow_api/project_conversation/list
   # upload
   upload_action_uri: /api/common/upload/apply_upload_action
   upload_common_uri: /api/common/upload
@@ -392,8 +394,25 @@ wga-sandbox:
     type: reuse
     host: wga-sandbox-wanwu
     image-name: ""
+  sandbox-ontology:
+    type: reuse
+    host: wga-sandbox-ontology-wanwu
+    image-name: ""
 
 ontology:
   enable: 0
   endpoint: http://vega-web:3010
   knowledge_network_list_uri: /vega/api/ontology-manager/v1/knowledge-networks
+  smart_data_skills:
+    - name: smart-data-analysis
+      desc: 数据分析总入口，负责意图识别、KN选择、SQL生成和路由
+      skillPath: configs/microservice/bff-service/configs/agent-skills/ontology/smart-data-analysis
+    - name: smart-search-tables
+      desc: 找表/找数编排，在元数据型知识网络下检索表/视图实例
+      skillPath: configs/microservice/bff-service/configs/agent-skills/ontology/smart-search-tables
+    - name: smart-ask-data
+      desc: 问数编排，执行SQL取数
+      skillPath: configs/microservice/bff-service/configs/agent-skills/ontology/smart-ask-data
+    - name: ontology-core
+      desc: ontology CLI命令执行器，所有ontology命令的底层执行
+      skillPath: configs/microservice/bff-service/configs/agent-skills/ontology/ontology-core

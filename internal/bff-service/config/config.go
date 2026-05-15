@@ -137,7 +137,8 @@ type DifyKnowledgeConfig struct {
 }
 
 type WgaSandboxConfig struct {
-	Sandbox WgaSandboxSandboxConfig `json:"sandbox" mapstructure:"sandbox"`
+	Sandbox         WgaSandboxSandboxConfig `json:"sandbox" mapstructure:"sandbox"`
+	SandboxOntology WgaSandboxSandboxConfig `json:"sandbox-ontology" mapstructure:"sandbox-ontology"`
 }
 
 type WgaSandboxSandboxConfig struct {
@@ -147,9 +148,16 @@ type WgaSandboxSandboxConfig struct {
 }
 
 type OntologyServiceConfig struct {
-	Enable                  int    `json:"enable" mapstructure:"enable"`
-	Endpoint                string `json:"endpoint" mapstructure:"endpoint"`
-	KnowledgeNetworkListUri string `json:"knowledge_network_list_uri" mapstructure:"knowledge_network_list_uri"`
+	Enable                  int                            `json:"enable" mapstructure:"enable"`
+	Endpoint                string                         `json:"endpoint" mapstructure:"endpoint"`
+	KnowledgeNetworkListUri string                         `json:"knowledge_network_list_uri" mapstructure:"knowledge_network_list_uri"`
+	SmartDataSkills         []OntologySmartDataSkillConfig `json:"smart_data_skills" mapstructure:"smart_data_skills"`
+}
+
+type OntologySmartDataSkillConfig struct {
+	Name      string `json:"name" mapstructure:"name"`
+	Desc      string `json:"desc" mapstructure:"desc"`
+	SkillPath string `json:"skillPath" mapstructure:"skillPath"`
 }
 
 type WorkflowTemplatePathConfig struct {
@@ -228,10 +236,11 @@ type WorkflowServiceConfig struct {
 	// conversation
 	CreateChatflowConversationUri string `json:"create_chatflow_conversation_uri" mapstructure:"create_chatflow_conversation_uri"`
 	GetConversationMessageListUri string `json:"get_conversation_message_list_uri" mapstructure:"get_conversation_message_list_uri"`
+	DeleteConversationUri         string `json:"delete_conversation_uri" mapstructure:"delete_conversation_uri"`
 	GetDraftIntelligenceListUri   string `json:"get_draft_intelligence_list_uri" mapstructure:"get_draft_intelligence_list_uri"`
 	GetDraftIntelligenceInfoUri   string `json:"get_draft_intelligence_info_uri" mapstructure:"get_draft_intelligence_info_uri"`
-	DeleteConversationUri         string `json:"delete_conversation_uri" mapstructure:"delete_conversation_uri"`
-	GetProjectConversationDef     string `json:"get_project_conversation_def" mapstructure:"get_project_conversation_def"`
+	GetProjectConversationUri     string `json:"get_project_conversation_uri" mapstructure:"get_project_conversation_uri"`
+	GetProjectConversationListUri string `json:"get_project_conversation_list_uri" mapstructure:"get_project_conversation_list_uri"`
 	// upload
 	UploadActionUri string `json:"upload_action_uri" mapstructure:"upload_action_uri"`
 	UploadCommonUri string `json:"upload_common_uri" mapstructure:"upload_common_uri"`
@@ -300,6 +309,7 @@ type CustomInfoConfig struct {
 	RegisterByEmail      int           `json:"register_by_email" mapstructure:"register_by_email"`
 	ResetPasswordByEmail int           `json:"reset_password_by_email" mapstructure:"reset_password_by_email"`
 	LoginByEmail         int           `json:"login_by_email" mapstructure:"login_by_email"`
+	UserPhoneRequired    int           `json:"user_phone_required" mapstructure:"user_phone_required"`
 }
 
 type CustomTheme struct {

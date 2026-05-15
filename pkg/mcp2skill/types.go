@@ -46,12 +46,12 @@ type ServerInfoDocument struct {
 
 // ToolDocument represents a single MCP tool in the IR.
 type ToolDocument struct {
-	Name        string
-	Description string
-	Parameters  []ParameterDocument
-	Required    []string
+	Name         string
+	Description  string
+	Parameters   []ParameterDocument
+	Required     []string
 	OutputSchema *OutputSchemaDocument
-	Annotations *ToolAnnotationsDocument
+	Annotations  *ToolAnnotationsDocument
 }
 
 // OutputSchemaDocument describes the output shape of a tool.

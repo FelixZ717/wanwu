@@ -133,7 +133,6 @@ func parseProperty(name string, prop *protocol.Property, isRequired bool) Parame
 	return doc
 }
 
-
 func propertyTypeToString(pt protocol.PropertyType) string {
 	if len(pt) == 0 {
 		return "any"

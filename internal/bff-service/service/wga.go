@@ -28,6 +28,9 @@ func GetGeneralAgentSubList(ctx *gin.Context) (*response.GetGeneralAgentSubListR
 
 	// 获取wga所支持的子智能体
 	for _, agent := range config.WgaCfg().SubAgents {
+		if agent.AgentID == "Ontology Agent" && config.Cfg().Ontology.Enable == 0 {
+			continue
+		}
 		result.WgaAgentList = append(result.WgaAgentList, response.GeneralAgentInfo{
 			AgentID:     agent.AgentID,
 			AgentName:   agent.AgentName,
@@ -167,7 +170,7 @@ func UpdateGeneralAgentConfig(ctx *gin.Context, userId, orgId string, req reques
 	}
 
 	// 校验 ontology 配置
-	if err := checkWgaOntologyConfig(ctx, userId, orgId, ontologyList); err != nil {
+	if err := checkWgaOntologyKnowledgeConfig(ctx, userId, orgId, ontologyList); err != nil {
 		return err
 	}
 
@@ -345,7 +348,7 @@ func GetGeneralAgentConfig(ctx *gin.Context, userId, orgId string) (response.Get
 	for _, o := range resp.Config.OntologyKnowledgeList {
 		ontologyIds = append(ontologyIds, o.OntologyKnowledgeId)
 	}
-	validOntologyIds, _ := getValidOntologyIds(ctx, ontologyIds)
+	validOntologyIds, _ := getValidOntologyIds(ctx, userId, orgId, ontologyIds)
 	var ontologyItems []*response.GeneralAgentConfigItem
 	for _, o := range resp.Config.OntologyKnowledgeList {
 		if validOntologyIds[o.OntologyKnowledgeId] {

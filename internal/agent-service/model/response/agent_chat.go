@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
+	agent_util "github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	"github.com/cloudwego/eino/schema"
 	"github.com/google/uuid"
@@ -56,7 +57,8 @@ func (c *AgentChatRespContext) IncreaseOrder() {
 	c.Order = c.Order + 1
 }
 
-func NewAgentChatRespContext(multiAgent bool, mainAgentName string, order int) *AgentChatRespContext {
+func NewAgentChatRespContext(multiAgent bool, order int, reqParams *request.AgentChatParams) *AgentChatRespContext {
+	var mainAgentName = reqParams.AgentBaseParams.Name
 	return &AgentChatRespContext{
 		MultiAgent:        multiAgent,
 		Order:             order,
@@ -106,9 +108,6 @@ func BuildAgentChatResp(req *request.AgentChatContext, chatMessage *schema.Messa
 
 func AgentChatSuccessResp(req *request.AgentChatContext, chatMessage *schema.Message, subAgentEventData *SubEventData, content string, notStop bool, respContext *AgentChatRespContext) *AgentChatResp {
 	agentFinish := buildFinish(chatMessage, notStop)
-	if agentFinish == finish {
-		log.Infof("finish agent: %v", respContext.DownloadContext.DownloadList)
-	}
 	return &AgentChatResp{
 		Code:          agentSuccessCode,
 		Message:       "success",
@@ -167,7 +166,7 @@ func buildFinish(chatMessage *schema.Message, notStop bool) int {
 	if notStop {
 		return notFinish
 	}
-	if chatMessage.ResponseMeta != nil && chatMessage.ResponseMeta.FinishReason == "stop" {
+	if agent_util.StopMessage(chatMessage) {
 		return finish
 	}
 	if chatMessage.Role == schema.Tool && chatMessage.ToolName == "exit" {

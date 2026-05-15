@@ -14,6 +14,7 @@ import (
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/response"
 	agent_http_client "github.com/UnicomAI/wanwu/internal/agent-service/pkg/http"
+	"github.com/UnicomAI/wanwu/internal/agent-service/pkg/util"
 	http_client "github.com/UnicomAI/wanwu/pkg/http-client"
 	"github.com/UnicomAI/wanwu/pkg/log"
 	openapi3_util "github.com/UnicomAI/wanwu/pkg/openapi3-util"
@@ -43,11 +44,12 @@ func (t *openAPITool) InvokableRun(ctx context.Context, argumentsInJSON string, 
 	return t.handler(ctx, argumentsInJSON)
 }
 
-func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.PluginToolInfo) ([]tool.BaseTool, error) {
+func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.PluginToolInfo, changeToolName bool) ([]tool.BaseTool, map[string]*request.ToolConfig, error) {
 	if len(pluginToolList) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	var allTools []tool.BaseTool
+	var toolIDMap = make(map[string]*request.ToolConfig)
 
 	for _, wrapper := range pluginToolList {
 		if wrapper.APISchema == nil {
@@ -85,6 +87,18 @@ func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.Pl
 				if einoTool.Name == "" {
 					einoTool.Name = fmt.Sprintf("%s_%s", method, path)
 				}
+				//处理模型functionName 不能包含中文等特殊字符的问题
+				var toolID = einoTool.Name
+				var toolName = einoTool.Name
+				if changeToolName {
+					toolID = util.MD5(einoTool.Name)
+					einoTool.Name = toolID
+				}
+				toolIDMap[toolID] = &request.ToolConfig{
+					ToolID:   toolID,
+					ToolName: toolName,
+					Avatar:   wrapper.ToolAvatar,
+				}
 
 				if len(apiTitle) > 0 {
 					einoTool.Desc = fmt.Sprintf("%s,%s", apiTitle, einoTool.Desc)
@@ -96,31 +110,19 @@ func GetToolsFromOpenAPISchema(ctx context.Context, pluginToolList []*request.Pl
 				}
 
 				contentType := getRequestContentType(operation)
-				handler := createHTTPHandler(serverURL, path, method, wrapper.APIAuth, contentType)
+				handler := createHTTPHandler(serverURL, path, method, wrapper.APIAuth, contentType, toolName)
 
 				tools := &openAPITool{
 					info:    einoTool,
 					handler: handler,
 				}
 
-				//// 打印工具详细信息
-				//paramsInfo := "no parameters"
-				//if toolInfo.ParamsOneOf != nil {
-				//	jsonSchema, err := toolInfo.ParamsOneOf.ToJSONSchema()
-				//	if err == nil && jsonSchema != nil {
-				//		paramsJSON, _ := json.MarshalIndent(jsonSchema, "", "  ")
-				//		paramsInfo = string(paramsJSON)
-				//	}
-				//}
-				//log.Printf("Loaded OpenAPI tool: %s\n  Description: %s\n  Method: %s %s\n  Parameters Schema:\n%s",
-				//	toolName, toolDesc, method, path, paramsInfo)
-
 				allTools = append(allTools, tools)
 			}
 		}
 	}
 
-	return allTools, nil
+	return allTools, toolIDMap, nil
 }
 
 func GetEnioToolsFromOpenAPISchema(ctx context.Context, pluginTool *request.PluginToolInfo) ([]*schema.ToolInfo, error) {
@@ -169,7 +171,7 @@ func getRequestContentType(operation *openapi3.Operation) string {
 	return "application/json"
 }
 
-func createHTTPHandler(serverURL, path, method string, auth *openapi3_util.Auth, contentType string) func(ctx context.Context, arguments string) (string, error) {
+func createHTTPHandler(serverURL, path, method string, auth *openapi3_util.Auth, contentType, toolName string) func(ctx context.Context, arguments string) (string, error) {
 	return func(ctx context.Context, arguments string) (string, error) {
 		start := time.Now().UnixMilli()
 		requestURL := serverURL + path
@@ -277,7 +279,7 @@ func createHTTPHandler(serverURL, path, method string, auth *openapi3_util.Auth,
 
 		resp, err := agent_http_client.GetClient().Client.Do(req)
 		respBody, err := buildResult(resp, err)
-		http_client.LogHttpRequest(ctx, "request_tool_call", method, requestURL, arguments, respBody, err, start)
+		http_client.LogHttpRequest(ctx, "request_tool_call_"+toolName, method, requestURL, arguments, respBody, err, start)
 		if err != nil {
 			return response.ToolErrResp(err)
 		}

@@ -11,12 +11,23 @@ import (
 )
 
 func Register(openAPI *gin.RouterGroup) {
-	// agent
+	// agent — 基础管理
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent", http.MethodPost, openapi.CreateAgent, "创建智能体OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
-	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/publish", http.MethodPost, openapi.PublishAgent, "发布智能体OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent", http.MethodDelete, openapi.DeleteAgent, "删除智能体OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/list", http.MethodGet, openapi.ListAgents, "智能体列表OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/info", http.MethodGet, openapi.GetAgentInfo, "获取智能体详情OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/config", http.MethodPut, openapi.UpdateAgentConfig, "更新智能体配置OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType), middleware.AuthModelByUuid([]string{"modelConfig.modelId", "rerankConfig.modelId", "recommendConfig.modelConfig.modelId"}))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/publish", http.MethodPost, openapi.PublishAgent, "发布智能体OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	// agent — 已发布对话管理
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation", http.MethodPost, openapi.CreateAgentConversation, "智能体创建对话OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation", http.MethodDelete, openapi.DeleteAgentConversation, "删除智能体对话OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation/list", http.MethodGet, openapi.ListAgentConversations, "智能体对话列表OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation/detail", http.MethodGet, openapi.GetAgentConversationDetail, "智能体对话历史消息OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation/clear", http.MethodDelete, openapi.ClearAgentConversation, "清空智能体对话历史OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	// agent — 草稿态对话管理
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation/draft/detail", http.MethodGet, openapi.GetAgentDraftConversationDetail, "草稿智能体对话历史消息OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/conversation/draft", http.MethodDelete, openapi.DeleteAgentDraftConversation, "删除草稿智能体对话历史OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	// agent — 问答
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/chat", http.MethodPost, openapi.ChatAgent, "智能体问答OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordFromReq))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/agent/chat/draft", http.MethodPost, openapi.DraftChatAgent, "智能体草稿态对话OpenAPI", constant.OpenAPITypeAgent, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordFromReq))
 	// rag
@@ -28,6 +39,8 @@ func Register(openAPI *gin.RouterGroup) {
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/workflow/file/upload", http.MethodPost, openapi.WorkflowFileUpload, "工作流OpenAPI文件上传", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	// chatflow
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/chatflow/conversation", http.MethodPost, openapi.CreateChatflowConversation, "对话流创建对话OpenAPI", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/chatflow/conversation", http.MethodDelete, openapi.DeleteChatflowConversation, "对话流删除会话OpenAPI", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
+	mid.Sub("openapi").RegWithAPIType(openAPI, "/chatflow/conversation/list", http.MethodPost, openapi.GetChatflowConversationList, "对话流获取会话列表OpenAPI", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/chatflow/conversation/message/list", http.MethodPost, openapi.GetConversationMessageList, "对话流根据conversationId获取历史对话", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/chatflow/chat", http.MethodPost, openapi.ChatflowChat, "对话流OpenAPI", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordStreamType))
 	mid.Sub("openapi").RegWithAPIType(openAPI, "/chatflow/file/upload", http.MethodPost, openapi.ChatflowFileUpload, "对话流OpenAPI文件上传", constant.OpenAPITypeChatflow, middleware.AuthOpenAPIKey(), middleware.APIKeyRecord(middleware.RecordNonStreamType))

@@ -352,7 +352,7 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		if err != nil {
 			return nil, err
 		}
-		if agentID != "" {
+		if agentID != config.WgaCfg().AgentID {
 			checkResult, err := wga.CheckToolOptions(ctx.Request.Context(), agentID, toolOpts...)
 			if err != nil {
 				return nil, grpc_util.ErrorStatus(err_code.Code_BFFGeneral, fmt.Sprintf("tool options check failed: %v", err))
@@ -481,23 +481,12 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 		opts = append(opts, knowledgeOpts...)
 	}
 
-	// 持久化存储
-	if workspaceStore != nil {
-		dirs, err := PrepareWgaWorkspaceDirs(workspaceStore, runID, true)
-		if err != nil {
-			log.Errorf("[wga] thread %v prepare input output dir err: %v", threadID, err)
-		} else {
-			opts = append(opts, wga_option.WithInputDir(dirs.InputDir))
-			if !workspaceReadOnly {
-				opts = append(opts, wga_option.WithOutputDir(dirs.OutputDir))
-			}
-			if urls := userInputMessage.GetURLs(); len(urls) > 0 {
-				if err := DownloadWgaWorkspaceURLs(urls, dirs.OutputDir); err != nil {
-					log.Errorf("download URLs %+v to workspace dir %v failed: %v", urls, dirs.OutputDir, err)
-				}
-			}
-		}
+	// 校验并构建Ontology知识网络的配置选项（追加@提及的Ontology知识网络）
+	ontologyOpts, ontologyMessage, err := buildWgaOntologyKnowledgeOptions(ctx, userID, orgID, agentID, wgaConfig.OntologyKnowledgeList, mentionResources.OntologyList)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, ontologyOpts...)
 
 	// Skill Preview Agent 模式，需要构建 skill 变量的 schema.Message
 	var skillMessage *schema.Message
@@ -532,8 +521,31 @@ func buildWgaRunOptions(ctx *gin.Context, userID, orgID, agentID, threadID, runI
 	if skillMessage != nil {
 		messages = append(messages, skillMessage)
 	}
+	// 追加Ontology知识网络系统提示消息
+	if ontologyMessage != nil {
+		messages = append(messages, ontologyMessage)
+	}
+	// 当前用户消息放在最后
 	messages = append(messages, convertWgaMessage(userInputMessage.Role, userInputMessage.Content))
 	opts = append(opts, wga_option.WithMessages(messages))
+
+	// 持久化存储（最后一步，确保前面所有配置校验通过才创建工作空间目录）
+	if workspaceStore != nil {
+		dirs, err := PrepareWgaWorkspaceDirs(workspaceStore, runID, true)
+		if err != nil {
+			log.Errorf("[wga] thread %v prepare input output dir err: %v", threadID, err)
+		} else {
+			opts = append(opts, wga_option.WithInputDir(dirs.InputDir))
+			if !workspaceReadOnly {
+				opts = append(opts, wga_option.WithOutputDir(dirs.OutputDir))
+			}
+			if urls := userInputMessage.GetURLs(); len(urls) > 0 {
+				if err := DownloadWgaWorkspaceURLs(urls, dirs.OutputDir); err != nil {
+					log.Errorf("download URLs %+v to workspace dir %v failed: %v", urls, dirs.OutputDir, err)
+				}
+			}
+		}
+	}
 
 	return opts, nil
 }
@@ -661,6 +673,9 @@ func buildWgaMentionResourcesMessage(resources *wgaMentionResources) *schema.Mes
 	}
 	for _, item := range resources.KnowledgeItems {
 		lines = append(lines, fmt.Sprintf("- @%s (knowledge) %s", item.Name, item.Desc))
+	}
+	for _, item := range resources.OntologyItems {
+		lines = append(lines, fmt.Sprintf("- @%s (ontology knowledge network) %s", item.Name, item.Desc))
 	}
 
 	return &schema.Message{
