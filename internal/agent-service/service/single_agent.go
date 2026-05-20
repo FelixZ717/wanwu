@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"github.com/UnicomAI/wanwu/internal/agent-service/service/agent-tool"
 
 	assistant_service "github.com/UnicomAI/wanwu/api/proto/assistant-service"
 	"github.com/UnicomAI/wanwu/internal/agent-service/model/request"
@@ -162,7 +163,7 @@ func searchSingleAgent(ctx *gin.Context, req *request.AgentChatReq) (*assistant_
 // 创建对应智能体
 func createAgent(ctx *gin.Context, req *request.AgentChatParams, chatModel model.ToolCallingChatModel, chatInfo *service_model.AgentChatInfo) (*adk.ChatModelAgent, map[string]*request.ToolConfig, error) {
 	baseParams := req.AgentBaseParams
-	toolsConfig, toolMap, err := BuildAgentToolsConfig(ctx, req, chatInfo)
+	toolsConfig, toolMap, err := agent_tool.BuildAgentToolsConfig(ctx, req, chatInfo)
 	if err != nil {
 		return nil, nil, err
 	}
