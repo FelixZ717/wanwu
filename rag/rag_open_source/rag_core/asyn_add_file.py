@@ -285,6 +285,8 @@ def add_files(user_id, kb_name, file_name, object_name, file_id,
     user_data_path = USER_DATA_PATH
     convert_dir = CONVERT_DIR
     res_filename = ""
+    # 收到 kafka 消息，开始解析
+    mq_rel_utils.update_doc_status(file_id, status=20)
     if not is_safe_filename(file_name):
         logger.error('文件名不合法')
         mq_rel_utils.update_doc_status(file_id, status=53)
