@@ -1473,8 +1473,8 @@ export default {
       if (res.code === 0) {
         this.$message.success(this.$t('common.info.delete'));
         if (this.currentThreadId === item.threadId) {
+          this.clearMessages(this.currentThreadId);
           this.currentThreadId = '';
-          this.messageList = [];
           this.hidePanel();
         }
         this.fetchConversationList();
