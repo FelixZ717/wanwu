@@ -930,6 +930,7 @@ func GetConversationList(ctx *gin.Context, userId, orgId string, req request.Con
 		PageNo:           int32(req.PageNo),
 		Identity: &assistant_service.Identity{
 			UserId: userId,
+			OrgId:  orgId,
 		},
 	})
 	if err != nil {
