@@ -125,28 +125,6 @@
           <div ref="scrollAnchor"></div>
         </div>
 
-        <!-- 滚动到底部按钮 -->
-        <transition name="scroll-btn-fade">
-          <button
-            v-if="showScrollToBottom"
-            class="scroll-to-bottom-btn"
-            @click="handleScrollToBottomClick"
-          >
-            <svg
-              fill="none"
-              height="16"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-              width="16"
-            >
-              <polyline points="6,9 12,15 18,9"></polyline>
-            </svg>
-          </button>
-        </transition>
-
         <!-- 底部输入区 -->
         <div
           :class="[
@@ -154,6 +132,27 @@
             { 'is-centered': isEmptyConversation && !isLoadingHistory },
           ]"
         >
+          <!-- 滚动到底部按钮 -->
+          <transition name="scroll-btn-fade">
+            <button
+              v-if="showScrollToBottom"
+              class="scroll-to-bottom-btn"
+              @click="handleScrollToBottomClick"
+            >
+              <svg
+                fill="none"
+                height="16"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+              >
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </button>
+          </transition>
           <!-- 欢迎词 - 仅居中时显示 -->
           <div
             v-if="isEmptyConversation && !isLoadingHistory"
@@ -2066,7 +2065,7 @@ export default {
 
 .scroll-to-bottom-btn {
   position: absolute;
-  bottom: 120px;
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
   width: 36px;
@@ -2108,6 +2107,7 @@ export default {
 }
 
 .input-area {
+  position: relative;
   flex: none;
   background: #fff;
   padding: 16px 24px 24px;
