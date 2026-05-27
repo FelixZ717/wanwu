@@ -3,7 +3,6 @@
     <div
       ref="messageArea"
       class="preview-message-area"
-      :class="{ empty: isEmptyConversation }"
       @scroll="handleMessageAreaScroll"
     >
       <div v-if="messageList.length > 0 || isStreaming" class="message-list">
@@ -26,17 +25,16 @@
       </div>
     </div>
 
-    <transition name="scroll-btn-fade">
-      <button
-        v-if="showScrollToBottom"
-        class="scroll-to-bottom-btn"
-        @click="handleScrollToBottomClick"
-      >
-        <i class="el-icon-arrow-down"></i>
-      </button>
-    </transition>
-
     <div class="preview-input-area">
+      <transition name="scroll-btn-fade">
+        <button
+          v-if="showScrollToBottom"
+          class="scroll-to-bottom-btn"
+          @click="handleScrollToBottomClick"
+        >
+          <i class="el-icon-arrow-down"></i>
+        </button>
+      </transition>
       <div v-if="uploadedFiles.length > 0" class="file-preview">
         <div
           v-for="(file, index) in uploadedFiles"
@@ -195,6 +193,10 @@ export default {
   },
   mounted() {
     this.initConversationFromProps();
+    this.setupInputResizeObserver();
+  },
+  activated() {
+    this.$nextTick(() => this.recalcTextarea());
   },
   watch: {
     'skillPreviewParams.previewId': {
@@ -207,6 +209,7 @@ export default {
   },
   beforeDestroy() {
     this.cleanupAllStreams();
+    this.teardownInputResizeObserver();
   },
   methods: {
     async initConversationFromProps() {
@@ -375,9 +378,29 @@ export default {
       this.stopStreaming(this.currentThreadId);
     },
 
-    handleWorkspaceActivity() {},
+    setupInputResizeObserver() {
+      if (typeof ResizeObserver === 'undefined') return;
+      const container = this.$el?.querySelector('.input-container');
+      if (!container) return;
+      this._inputResizeObserver = new ResizeObserver(() => {
+        this.recalcTextarea();
+      });
+      this._inputResizeObserver.observe(container);
+    },
 
-    showPanel() {},
+    teardownInputResizeObserver() {
+      if (this._inputResizeObserver) {
+        this._inputResizeObserver.disconnect();
+        this._inputResizeObserver = null;
+      }
+    },
+
+    recalcTextarea() {
+      const input = this.$refs.input;
+      if (input && input.resizeTextarea) {
+        input.resizeTextarea();
+      }
+    },
   },
 };
 </script>
@@ -442,6 +465,7 @@ $border: #e5e7eb;
 }
 
 .preview-input-area {
+  position: relative;
   flex: none;
   padding: 12px 14px 16px;
   background: #fff;
@@ -613,7 +637,7 @@ $border: #e5e7eb;
 
 .scroll-to-bottom-btn {
   position: absolute;
-  bottom: 120px;
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
   width: 34px;
@@ -639,7 +663,7 @@ $border: #e5e7eb;
 .scroll-btn-fade-enter,
 .scroll-btn-fade-leave-to {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateX(-50%) translateY(20px);
 }
 
 ::v-deep .message-item {
