@@ -95,7 +95,7 @@ func GetGeneralAgentResourceSelect(ctx *gin.Context, userId, orgId string, name 
 	go func() {
 		defer util.PrintPanicStack()
 		defer wg.Done()
-		resp, err := GetAssistantSelect(ctx, userId, orgId, request.GetExplorationAppListRequest{Name: name})
+		resp, err := GetAssistantSelectSingle(ctx, userId, orgId, request.GetExplorationAppListRequest{Name: name})
 		if err != nil {
 			assistantErr = err
 			return
