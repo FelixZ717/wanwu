@@ -730,6 +730,7 @@ export default {
 .preview-ppt-wrapper,
 .preview-html-wrapper {
   overflow: hidden;
+  width: 100%;
 }
 
 .preview-pdf,
@@ -751,6 +752,25 @@ export default {
   min-height: 0;
   overflow: auto;
   background: #fff;
+  width: 100%;
+
+  ::v-deep .vue-office-docx {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  ::v-deep .docx-wrapper {
+    background: #fff;
+    padding: 0;
+  }
+
+  ::v-deep .docx-wrapper > section.docx {
+    box-shadow: none;
+    margin-bottom: 0;
+    width: auto !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 .preview-unsupported {
