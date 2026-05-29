@@ -107,18 +107,43 @@ def extrac_graph_data(user_id, kb_name, file_name, file_id, enable_knowledge_gra
     # 图谱解析开始执行
     mq_rel_utils.update_doc_status(file_id, status=110)
 
-    # -------------- 先将从数据库中获取 all_extrac_graph_chunks--------------
+    user_data_path = './user_data'
+    filepath = os.path.join(user_data_path, user_id, kb_name)
+    logger.info('add_files_filepath=%s' % filepath)
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    else:
+        logger.info('filepath=%s 已存在' % filepath)
+
+    # -------------- 先解析 graph schema --------------
+    schema = {}
+    # 当graph_schema_filename,graph_schema_objectname有值则说明用户自己上传excel，否则schema为空后续会用内置schema抽取
+    if enable_knowledge_graph and graph_schema_filename and graph_schema_objectname:
+        try:
+            schema_file_path = os.path.join(filepath, graph_schema_filename)
+            graph_download_status, graph_download_link = minio_utils.get_file_from_minio(graph_schema_objectname,
+                                                                                         schema_file_path)
+            logger.info("graph_download_status=%s,graph_download_link=%s" %
+                        (graph_download_status, graph_download_link))
+            schema = graph_utils.parse_excel_to_schema_json(schema_file_path)
+            logger.info(f'提取graph schema成功'
+                         + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name) + str(schema))
+            # graph schema 解析成功
+            mq_rel_utils.update_doc_status(file_id, status=111)
+        except Exception as e:
+            logger.error(repr(e))
+            logger.error(f'提取graph schema失败'
+                         + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name))
+            mq_rel_utils.update_doc_status(file_id, status=104)
+            return
+
+    # -------------- 再从数据库中获取 all_extrac_graph_chunks --------------
     try:
-        user_data_path = './user_data'
-        filepath = os.path.join(user_data_path, user_id, kb_name)
-        logger.info('add_files_filepath=%s' % filepath)
-        if not os.path.exists(filepath):
-            os.makedirs(filepath)
-        else:
-            logger.info('filepath=%s 已存在' % filepath)
         all_wait_extrac_chunks = graph_utils.get_all_extrac_graph_chunks(user_id, kb_name, file_name)
         logger.info(repr(file_name) + 'all_wait_extrac_chunks长度：' + repr(len(all_wait_extrac_chunks)))
         logger.info('all_wait_extrac_chunks 获取完成' + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name))
+        # 生成图谱获取 chunk 文本成功
+        mq_rel_utils.update_doc_status(file_id, status=112)
     except Exception as e:
         import traceback
         logger.error(traceback.format_exc())
@@ -134,25 +159,6 @@ def extrac_graph_data(user_id, kb_name, file_name, file_id, enable_knowledge_gra
     all_graph_vocabulary_set = set()
     batch_size = 10
     if enable_knowledge_graph:
-        schema = {}
-        # 当graph_schema_filename,graph_schema_objectname有值则说明用户自己上传excel，否则schema为空后续会用内置schema抽取
-        if graph_schema_filename and graph_schema_objectname:
-            try:
-                schema_file_path = os.path.join(filepath, graph_schema_filename)
-                graph_download_status, graph_download_link = minio_utils.get_file_from_minio(graph_schema_objectname,
-                                                                                             schema_file_path)
-                logger.info("graph_download_status=%s,graph_download_link=%s" %
-                            (graph_download_status, graph_download_link))
-                schema = graph_utils.parse_excel_to_schema_json(schema_file_path)
-                logger.info(f'提取graph schema成功'
-                             + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name) + str(schema))
-            except Exception as e:
-                logger.error(repr(e))
-                logger.error(f'提取graph schema失败'
-                             + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name))
-                mq_rel_utils.update_doc_status(file_id, status=104)
-                return
-
         for i in range(0, len(all_wait_extrac_chunks), batch_size):
             batch_num = int(i/batch_size) + 1
             temp_chunks = all_wait_extrac_chunks[i:i + batch_size]
@@ -170,6 +176,9 @@ def extrac_graph_data(user_id, kb_name, file_name, file_id, enable_knowledge_gra
                              + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name))
                 mq_rel_utils.update_doc_status(file_id, status=102)
                 return
+
+        # 提取图谱成功
+        mq_rel_utils.update_doc_status(file_id, status=113)
 
     # --------------  insert es graph_data ----------------
     try:
@@ -189,6 +198,8 @@ def extrac_graph_data(user_id, kb_name, file_name, file_id, enable_knowledge_gra
                                                         elements_to_add=all_graph_vocabulary_set)
                 # 回调
                 logger.info('graph_data插入es完成' + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name))
+                # 图谱持久化存储成功
+                mq_rel_utils.update_doc_status(file_id, status=114)
     except Exception as e:
         logger.error(repr(e))
         logger.error('graph_data插入es失败' + "user_id=%s,kb_name=%s,file_name=%s" % (user_id, kb_name, file_name))
